@@ -1,0 +1,24 @@
+{
+  "count": 4259,
+  "stride_floats": 10,
+  "domain_offset": 170360,
+  "kind_offset": 174619,
+  "domains": [
+    "Jade",
+    "Ruby",
+    "Blue",
+    "Gold"
+  ],
+  "kinds": [
+    "Plain",
+    "Shielded",
+    "SuperShielded",
+    "Danger"
+  ],
+  "source": {
+    "game_commit": "4d906ea1f31aa9ca6068c83c389060a5bcff141d",
+    "generator": "Assets/_Scripts/Controller/Environment/MiniGameObjects/SpawnableGarland.cs",
+    "generator_sha256": "042dcafbb7c58483475a000a6c490ec497feef88e148be040f29131acfe10967",
+    "model": "Tools/Build/author_garland_cell.py"
+  }
+}
