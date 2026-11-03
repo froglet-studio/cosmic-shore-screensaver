@@ -13,7 +13,6 @@ const params = new URLSearchParams(location.search);
 const FPS_CAP = Number(params.get('fps') ?? 30);
 const DEBUG = params.has('debug');
 let view: 'lavalamp' | 'vessel' = params.get('view') === 'vessel' ? 'vessel' : 'lavalamp';
-const ASSETS = `${import.meta.env.BASE_URL}content/`;
 
 // ── renderer ──────────────────────────────────────────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
@@ -53,8 +52,8 @@ composer.addPass(new OutputPass());
 
 // ── content ───────────────────────────────────────────────────────────────────────────────
 const [garland, vessel] = await Promise.all([
-  loadGarland(ASSETS),
-  loadVessel(`${ASSETS}squirrel.glb`, DOMAINS[JADE]),
+  loadGarland(),
+  loadVessel('squirrel.glb', DOMAINS[JADE]),
 ]);
 scene.add(garland);
 scene.add(vessel);
@@ -92,9 +91,34 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
 });
+function toggleView() {
+  view = view === 'vessel' ? 'lavalamp' : 'vessel';
+  if (viewBtn) viewBtn.textContent = view === 'vessel' ? 'Wide view' : 'Close-up';
+}
 addEventListener('keydown', (e) => {
-  if (e.key === 'v') view = view === 'vessel' ? 'lavalamp' : 'vessel';
+  if (e.key === 'v') toggleView();
 });
+
+// Preview controls: only in the shareable preview page (window.__PREVIEW), never in the screensaver.
+let viewBtn: HTMLButtonElement | null = null;
+if ((window as unknown as { __PREVIEW?: boolean }).__PREVIEW) {
+  const bar = document.createElement('div');
+  bar.id = 'controls';
+  const mk = (label: string, onClick: () => void) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    bar.appendChild(b);
+    return b;
+  };
+  viewBtn = mk(view === 'vessel' ? 'Wide view' : 'Close-up', toggleView);
+  mk('Full screen', () => {
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  });
+  document.body.appendChild(bar);
+}
 
 // ── loop: capped frame rate; the browser already stops rAF on hidden pages ─────────────────
 const hud = document.getElementById('hud')!;

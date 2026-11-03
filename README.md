@@ -7,12 +7,18 @@ through the Garland garden. It runs with no game, no Unity, no account and no ne
 - **Status:** M0, the scaffold. A static Garland (4,259 prisms from the game's own generator) and the
   Squirrel, in three.js, with the LavaLamp camera orbit.
 
+## See it without installing anything
+
+A live preview is published as a claude.ai page: https://claude.ai/artifact/3ybP8FmuapZ4mf1D9XT1c2
+(private to Froglet until it is shared from the page's Share menu).
+
 ## Run it
 
 ```bash
 npm install
 npm run dev          # http://localhost:5173  (?view=vessel for the vessel close-up, ?debug for stats, ?fps=60)
 npm run build        # dist/ is the whole bundle; it runs from any folder
+npm run build:single # one self-contained HTML file in dist-single/ (the preview page)
 npm run smoke        # headless Chromium: fails on console errors or any external request; screenshots in smoke-out/
 ```
 

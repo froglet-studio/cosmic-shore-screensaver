@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DOMAINS } from './palette';
+import { loadBytes, loadJson } from './content';
 
 interface GarlandMeta {
   count: number;
@@ -15,11 +16,8 @@ interface GarlandMeta {
  * The prism look is an M0 stand-in for the game's BlockGraph: a dark face (OutsideBlockColor)
  * with bright HDR edges (InsideBlockColor) that the bloom pass picks up. M2 matches it to Unity.
  */
-export async function loadGarland(base: string): Promise<THREE.InstancedMesh> {
-  const [meta, buf] = await Promise.all([
-    fetch(`${base}garland.json`).then((r) => r.json() as Promise<GarlandMeta>),
-    fetch(`${base}garland.bin`).then((r) => r.arrayBuffer()),
-  ]);
+export async function loadGarland(): Promise<THREE.InstancedMesh> {
+  const [meta, buf] = await Promise.all([loadJson<GarlandMeta>('garland.json'), loadBytes('garland.bin')]);
   const n = meta.count;
   const f = new Float32Array(buf, 0, n * meta.stride_floats);
   const dom = new Uint8Array(buf, meta.domain_offset, n);

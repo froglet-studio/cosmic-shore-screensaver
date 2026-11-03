@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { DomainColors } from './palette';
+import { loadBytes } from './content';
 
 /**
  * Load a vessel glTF (tools/export/export_vessel.py) and dress it from its material SLOT names,
  * the same four slots the game's VesselGraph keys: Body, Domain, Engine, Window.
  * The game's shaders are never shipped; this is the screensaver's own flat-emissive look.
  */
-export async function loadVessel(url: string, domain: DomainColors): Promise<THREE.Object3D> {
-  const gltf = await new GLTFLoader().loadAsync(url);
+export async function loadVessel(name: string, domain: DomainColors): Promise<THREE.Object3D> {
+  const gltf = await new GLTFLoader().parseAsync(await loadBytes(name), '');
   const root = gltf.scene;
   const slot = (name: string): THREE.Material => {
     const n = name.toLowerCase();
