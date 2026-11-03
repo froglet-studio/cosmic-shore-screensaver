@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - name: Report bundle size
+        run: |
+          du -ab dist | sort -n | tail -8
+          echo "total: $(du -sb dist | cut -f1) bytes"
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke test (no console errors, no external requests, scene ready)
+        run: npm run smoke
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: smoke-out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-bundle
+          path: dist/
