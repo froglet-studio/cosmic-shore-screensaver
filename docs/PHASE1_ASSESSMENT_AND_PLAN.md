@@ -452,7 +452,7 @@ or instead run `xattr -dr com.apple.quarantine CosmicShore.saver` before install
 ([Macworld](https://www.macworld.com/article/2457844/what-to-do-when-you-cant-open-an-app-you-just-installed-in-macos-sequoia.html)).
 On Apple Silicon, code must be at least ad-hoc signed to load at all, so CI ad-hoc signs (`codesign -s -`)
 even before enrollment. That is fine for the team and a few testers, and not acceptable for the public, so
-the public macOS milestone (M7b) is **gated on enrollment**.
+the public macOS milestone (M7b) is **gated on enrollment**. *(Update 2026-11-03: Froglet Games already has an Apple Developer account, so this gate is met; signing goes through Shombith, §9.1.)*
 
 **The fallback**, if `legacyScreenSaver` regresses further: a tiny signed "ambient mode" menu-bar app
 that goes fullscreen after the user's idle time and exits on input. It is the same bundle in a WKWebView
@@ -504,7 +504,23 @@ step logs "unsigned build" and passes, so adding signing is a configuration chan
 
 ---
 
-## 9. Decisions I need from you
+## 9. Decisions
+
+### 9.1 Decided (Caleb, 2026-11-03)
+
+| # | Decision |
+|---|---|
+| **D1** | **Web (option C).** Froglet Games already has an Apple Developer account. That changes the macOS timeline, not the choice: the `.saver` host is a WKWebView either way, and Unity still has no path into a `.saver`. |
+| **D2** | **This repo becomes public**, and downloads ship through GitHub Releases. |
+| **D3** | **Content as recommended:** Squirrel, Manta and Serpent; Arbor, Tendril, Lantern and Spire; QuadFish and Shark. |
+| **D5** | **Apple:** use Froglet Games' existing Apple Developer team. Its Developer ID certificate and notarization credentials come from Shombith, or the finished macOS build is handed to Shombith to sign and publish. So **M7b is no longer blocked on enrollment**; there is no D-U-N-S wait. **Windows:** Azure Artifact Signing is still to set up before M6. |
+
+### 9.2 Still open
+
+D4 (trail ring buffer), D6 (where the flora export script lives) and D7 (art provenance) from the table
+below. D7 must be settled before the first public release.
+
+### 9.3 The original table
 
 | # | Decision | My recommendation |
 |---|---|---|
