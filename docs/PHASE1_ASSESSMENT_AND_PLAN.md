@@ -268,15 +268,29 @@ as Home" becomes something we can judge.
 
 ## 5. The screensaver itself (behaviour)
 
-- **Vessels:** 1 to 3 (setting). Each flies a pursuit-and-arrive steering law toward the crystal, with
-  wander, banking from lateral acceleration, and avoidance of the nucleus sphere. When a vessel reaches the
-  crystal, the crystal relocates on a jittered anchor (`anchorJitterRadius` 35 in the game; the
-  screensaver uses ring positions inside the garden band), and every vessel retargets. There is no scoring
-  and no input.
+- **Vessels:** 1 to 3 (setting). Each flies the game's own AI steering law toward the crystal
+  (`AIPilot.cs` feeding `VesselTransformer` with the hull's prefab numbers; see "As built in M1" below),
+  with a bounded bank into the turn. When a vessel reaches the crystal, the crystal relocates, and every
+  vessel retargets. There is no scoring and no input.
 - **Trails:** each vessel lays prisms at the game's cadence into a **fixed ring buffer** (for example 1,500
   per vessel), recycling the oldest with the game's shrink-out. *This deliberately breaks the game's
   conserved-mass law.* That law is for gameplay, and an unbounded trail is unbounded memory in a product
   meant to run for days. See decision D4.
+- **As built in M1** (read from the game, 2026-11-03; this corrects the guesses above):
+  - *Crystal.* Menu_Main authors no anchor list, so `CrystalManager.GetAnchorlessSpawnPoint` puts the one
+    crystal at a uniform random point inside a ball the size of the nucleus (radius 392) around the cell
+    centre, at least 5 units from its last spot. The vessels therefore fly inside the nucleus; there is no
+    nucleus avoidance. `Crystal.prefab` (scale 10, collider radius 1.2) is collected within 12 units.
+  - *Pilot.* Full stick toward the target except within a hair of the nose
+    (`asin(|c|² · 100 / min(d², 50))`, hard turn when the target is behind). The stick turns the commanded
+    rotation at 120 °/s (Squirrel `PitchScaler`/`YawScaler`); the hull follows it at 1.5 per second (AI
+    pilots keep the fleet nose lag), which is what makes the wide, overshooting loops. Speed eases to
+    0.6 × 60 = 36 u/s. The game's continuous roll input is replaced by a bank of up to 38° on the model.
+  - *Trail.* Two rails, a pair every 7 units of travel after a 2 s delay; each rail prism is
+    0.75 × 0.75 × 5.5, 9.625 off the flight line (slab 20 wide minus the 18.5 gap). The ring holds 1,500
+    prisms (about 107 s of flight); the oldest 80 shrink away as new ones are laid.
+  - *Camera.* LavaLamp position on its orbit; the look turns toward the crystal at `rotationSharpness`
+    0.45 (`MenuCam_LavaLamp1.asset`), so the shot drifts slowly after each relocation.
 - **Camera:** LavaLamp1 by default (686 u, 2.83°/s, aimed at the crystal), with slow glides to an orbit and
   a cinematic-trail framing every ~45 s, as the game does. TopDown and ChaseTight are probably too busy;
   we decide at M2.

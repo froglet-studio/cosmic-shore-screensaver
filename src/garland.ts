@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { DOMAINS } from './palette';
+import { loadBytes, loadJson } from './content';
 
 interface GarlandMeta {
   count: number;
@@ -9,33 +10,12 @@ interface GarlandMeta {
 }
 
 /**
- * The Garland environment: 4,259 prisms exported from the game's own generator model
- * (tools/export/export_garland.py), drawn as ONE instanced box mesh.
- *
- * The prism look is an M0 stand-in for the game's BlockGraph: a dark face (OutsideBlockColor)
- * with bright HDR edges (InsideBlockColor) that the bloom pass picks up. M2 matches it to Unity.
+ * The prism look shared by the Garland and every trail: a dark face (OutsideBlockColor) with bright HDR
+ * edges (InsideBlockColor) that bloom picks up. Per-instance colours come from aInside / aOutside.
+ * An M0 stand-in for the game's BlockGraph; M2 matches it to Unity.
  */
-export async function loadGarland(base: string): Promise<THREE.InstancedMesh> {
-  const [meta, buf] = await Promise.all([
-    fetch(`${base}garland.json`).then((r) => r.json() as Promise<GarlandMeta>),
-    fetch(`${base}garland.bin`).then((r) => r.arrayBuffer()),
-  ]);
-  const n = meta.count;
-  const f = new Float32Array(buf, 0, n * meta.stride_floats);
-  const dom = new Uint8Array(buf, meta.domain_offset, n);
-  const kind = new Uint8Array(buf, meta.kind_offset, n);
-
-  const geo = new THREE.BoxGeometry(1, 1, 1);
-  const inside = new Float32Array(n * 3);
-  const outside = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) {
-    const d = DOMAINS[dom[i]];
-    const sup = kind[i] === 2;
-    (sup ? d.superInside : d.inside).toArray(inside, i * 3);
-    (sup ? d.superOutside : d.outside).toArray(outside, i * 3);
-  }
-
-  const mat = new THREE.ShaderMaterial({
+export function makePrismMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
     vertexShader: /* glsl */ `
       attribute vec3 aInside;
       attribute vec3 aOutside;
@@ -78,6 +58,30 @@ export async function loadGarland(base: string): Promise<THREE.InstancedMesh> {
         #include <colorspace_fragment>
       }`,
   });
+}
+
+/**
+ * The Garland environment: 4,259 prisms exported from the game's own generator model
+ * (tools/export/export_garland.py), drawn as ONE instanced box mesh.
+ */
+export async function loadGarland(): Promise<THREE.InstancedMesh> {
+  const [meta, buf] = await Promise.all([loadJson<GarlandMeta>('garland.json'), loadBytes('garland.bin')]);
+  const n = meta.count;
+  const f = new Float32Array(buf, 0, n * meta.stride_floats);
+  const dom = new Uint8Array(buf, meta.domain_offset, n);
+  const kind = new Uint8Array(buf, meta.kind_offset, n);
+
+  const geo = new THREE.BoxGeometry(1, 1, 1);
+  const inside = new Float32Array(n * 3);
+  const outside = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const d = DOMAINS[dom[i]];
+    const sup = kind[i] === 2;
+    (sup ? d.superInside : d.inside).toArray(inside, i * 3);
+    (sup ? d.superOutside : d.outside).toArray(outside, i * 3);
+  }
+
+  const mat = makePrismMaterial();
 
   const mesh = new THREE.InstancedMesh(geo, mat, n);
   geo.setAttribute('aInside', new THREE.InstancedBufferAttribute(inside, 3));
