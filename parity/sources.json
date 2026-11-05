@@ -1,0 +1,222 @@
+{
+  "about": "What the screensaver copies from the game's Home screen, where it lives in the game repo, and the game commit each piece was last brought over from. tools/parity/check.py reads this; parity/PARITY.md explains it. Update synced_at only with check.py --mark-synced, after the screensaver matches.",
+  "game_repo": "froglet-studio/Cosmic-Shore",
+  "game_branch": "bleeding-edge",
+  "items": [
+    {
+      "id": "palette",
+      "what": "Domain colours: prism faces and rims, hull, trail. The game paints with whichever colour set ThemeManagerDataContainer names (Nocturne since 2026-11-03).",
+      "game": [
+        "Assets/_SO_Assets/ThemeManagerDataContainer.asset",
+        "Assets/_SO_Assets/Color Palettes/",
+        "Assets/_Scripts/ScriptableObjects/SO_ColorSet.cs",
+        "Assets/_Scripts/Controller/Managers/ThemeManager.cs"
+      ],
+      "screensaver": [
+        "src/palette.ts"
+      ],
+      "sync": "python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore",
+      "auto_check": "palette",
+      "synced_at": "38ed172e6dd04177cbea4c36c76df9bcbf3d9ce4"
+    },
+    {
+      "id": "garland",
+      "what": "The Garland world: 4,259 prisms laid by the game's own generator.",
+      "game": [
+        "Assets/_Scripts/Controller/Environment/MiniGameObjects/SpawnableGarland.cs",
+        "Tools/Build/author_garland_cell.py",
+        "Tools/Build/garland_measurements.json",
+        "Assets/_SO_Assets/Cell Configs/Garland Cell/Garland Cell Config.asset"
+      ],
+      "screensaver": [
+        "public/content/garland.bin",
+        "public/content/garland.json",
+        "src/garland.ts"
+      ],
+      "sync": "python3 tools/export/export_garland.py --game-repo ../Cosmic-Shore",
+      "auto_check": "garland",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "prism-look",
+      "what": "How a prism is shaded (base face, fresnel rim, edge glow, grow-in). The screensaver re-authors it in GLSL, so a change here is a hand port.",
+      "game": [
+        "Assets/_Graphics/Materials/Graphs/BlockGraph.shadergraph",
+        "Docs/PALETTE.md"
+      ],
+      "screensaver": [
+        "src/garland.ts"
+      ],
+      "sync": "Hand port; compare with Unity stills (plan M2).",
+      "synced_at": "38ed172e6dd04177cbea4c36c76df9bcbf3d9ce4"
+    },
+    {
+      "id": "skybox",
+      "what": "The HyperSea sky (procedural stars, nebulae, hex grid, galactic core).",
+      "game": [
+        "Assets/_Graphics/Materials/Shaders/HyperSeaSkybox.shader",
+        "Assets/_Graphics/Skyboxes/HyperSeaSkybox.mat",
+        "Assets/Resources/PlatformSkyboxes/StaticHyperSeaSkybox.mat"
+      ],
+      "screensaver": [
+        "src/sky.ts"
+      ],
+      "sync": "Hand port of the shader; copy the material's values.",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "post",
+      "what": "Bloom and Panini projection from the game's post-processing profile.",
+      "game": [
+        "Assets/_Graphics/GamePlay PostProcessing Profile.asset",
+        "Assets/_Prefabs/Environment/PostProcessing.prefab"
+      ],
+      "screensaver": [
+        "src/main.ts"
+      ],
+      "sync": "Copy the numbers by hand.",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "camera",
+      "what": "The Home screen camera: LavaLamp orbit and the other menu shots.",
+      "game": [
+        "Assets/_SO_Assets/Camera/MenuCam_LavaLamp1.asset",
+        "Assets/_SO_Assets/Camera/MenuCam_OrbitVessel.asset",
+        "Assets/_SO_Assets/Camera/MenuCam_CinematicTrail.asset",
+        "Assets/_SO_Assets/Camera/MenuCam_ChaseTight.asset",
+        "Assets/_SO_Assets/Camera/MenuCam_TopDownPan.asset",
+        "Assets/_Scripts/Controller/Camera/MainMenuCameraController.cs"
+      ],
+      "screensaver": [
+        "src/main.ts"
+      ],
+      "sync": "Copy the numbers by hand.",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "home-scene",
+      "what": "Menu_Main itself: which vessel flies, the crystal manager, which world boots. Big file; read only the hunks that touch the menu vessel, crystals or Cell.",
+      "game": [
+        "Assets/_Scenes/Menu_Main.unity",
+        "Assets/_Prefabs/Environment/Cell.prefab",
+        "Docs/claude/MENU_AND_LAVA_LAMP.md"
+      ],
+      "screensaver": [
+        "src/main.ts"
+      ],
+      "sync": "Read the change; usually nothing to do.",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "cell-shell",
+      "what": "Membrane, nucleus cage and cytoplasm shards around the Garland.",
+      "game": [
+        "Assets/_Prefabs/Environment/CapsuleMembrane.prefab",
+        "Assets/_Prefabs/Environment/Nucleus.prefab",
+        "Assets/_Prefabs/Environment/Cytoplasm/SnowChanger.prefab",
+        "Assets/_Graphics/Materials/Graphs/SpindleGraph.shadergraph",
+        "Assets/_Graphics/Materials/Graphs/CageGraph.shadergraph"
+      ],
+      "screensaver": [],
+      "sync": "Not built yet (plan M2).",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "crystal",
+      "what": "The Omni crystal's look.",
+      "game": [
+        "Assets/_Prefabs/Environment/Crystal.prefab",
+        "Assets/_Graphics/Materials/Graphs/CrystalGraph.shadergraph",
+        "Assets/_Graphics/Materials/Shaders/OmniCrystalFresnelShader.shader",
+        "Assets/_Graphics/Materials/Shaders/OmniDepthPrismShader.shader",
+        "Assets/_Graphics/Materials/Shaders/CrystalChargeArcsShader.shader",
+        "Assets/_Graphics/Materials/CrystalMaterials/"
+      ],
+      "screensaver": [
+        "src/crystal.ts"
+      ],
+      "sync": "Hand port (plan M2).",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "squirrel",
+      "what": "The Squirrel hull (model, shape keys, takes) and the vessel shading.",
+      "game": [
+        "Assets/_Models/Vessel Models/SquirrelVessel_CosmicShoresTest1.fbx",
+        "Assets/_Graphics/Materials/Graphs/VesselGraph.shadergraph",
+        "Docs/VesselModels/Squirrel.md",
+        "Docs/VesselModels/COLOR.md"
+      ],
+      "screensaver": [
+        "public/content/squirrel.glb",
+        "src/vessel.ts"
+      ],
+      "sync": "tools/export/export_vessel.py --name squirrel (needs Blender's bpy; see tools/export/README.md)",
+      "synced_at": "38ed172e6dd04177cbea4c36c76df9bcbf3d9ce4"
+    },
+    {
+      "id": "pilot",
+      "what": "How the AI flies the vessel toward the crystal.",
+      "game": [
+        "Assets/_Scripts/Controller/AI/AIPilot.cs"
+      ],
+      "screensaver": [
+        "src/pilot.ts"
+      ],
+      "sync": "Read the change; port only steering that shows on screen.",
+      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+    },
+    {
+      "id": "manta",
+      "what": "The Manta hull.",
+      "game": [
+        "Assets/_Models/Vessel Models/Manta_shapekey_rigged.fbx",
+        "Docs/VesselModels/Manta.md"
+      ],
+      "screensaver": [],
+      "sync": "Not built yet (plan M3). Export from the game's HEAD when built, then --mark-synced.",
+      "synced_at": null
+    },
+    {
+      "id": "serpent",
+      "what": "The Serpent hull.",
+      "game": [
+        "Assets/_Models/Vessel Models/SerpentExport.fbx",
+        "Docs/VesselModels/Serpent.md"
+      ],
+      "screensaver": [],
+      "sync": "Not built yet (plan M3).",
+      "synced_at": null
+    },
+    {
+      "id": "flora",
+      "what": "Garland's four plants: Arbor, Tendril, Lantern, Spire.",
+      "game": [
+        "Assets/_Prefabs/FloraAndFauna/ArborFlora.prefab",
+        "Assets/_Prefabs/FloraAndFauna/TendrilFlora.prefab",
+        "Assets/_Prefabs/FloraAndFauna/LanternFlora.prefab",
+        "Assets/_Prefabs/FloraAndFauna/SpireFlora.prefab",
+        "Assets/_SO_Assets/Cell Configs/Garland Cell/",
+        ".claude/skills/flora/"
+      ],
+      "screensaver": [],
+      "sync": "Not built yet (plan M3).",
+      "synced_at": null
+    },
+    {
+      "id": "fauna",
+      "what": "QuadFish and Shark.",
+      "game": [
+        "Assets/_Prefabs/FloraAndFauna/QuadFish.prefab",
+        "Assets/_Models/Fauna/mediumfish.fbx",
+        "Assets/_Models/Fauna/Shark_model.fbx",
+        "Assets/_Models/Fauna/MassSharkFauna.prefab",
+        ".claude/skills/fauna/"
+      ],
+      "screensaver": [],
+      "sync": "Not built yet (plan M3).",
+      "synced_at": null
+    }
+  ]
+}
