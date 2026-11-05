@@ -7,7 +7,8 @@
 Reads parity/sources.json. For every item the screensaver has built, it lists the game commits that
 touched that item's game paths since the item's synced_at commit, and flags game paths that no longer
 exist (a rename or a move breaks an exporter silently). Two items are checked by value, not by history:
-the palette (tools/export/export_palette.py --check) and the Garland generator (its source hash).
+the palette (tools/export/export_palette.py --check), the sky (tools/export/export_skybox.py --check) and the
+Garland generator (its source hash).
 
 --mark-synced moves those items' synced_at to the game repo's HEAD. Run it only after the screensaver
 matches the game for those items. Plain Python 3, no dependencies; it only reads the game repo.
@@ -54,7 +55,13 @@ def auto_garland(repo):
     return False, "garland: SpawnableGarland.cs changed since the export; re-run tools/export/export_garland.py"
 
 
-AUTO = {"palette": auto_palette, "garland": auto_garland}
+def auto_skybox(repo):
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "export", "export_skybox.py"),
+                        "--game-repo", repo, "--check"], capture_output=True, text=True)
+    return r.returncode == 0, "skybox: " + (r.stdout.strip() or r.stderr.strip())
+
+
+AUTO = {"palette": auto_palette, "garland": auto_garland, "skybox": auto_skybox}
 
 
 def main():

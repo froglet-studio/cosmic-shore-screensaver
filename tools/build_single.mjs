@@ -1,5 +1,5 @@
 // Build ONE self-contained HTML file: the bundle's JS inlined and every exported content file
-// embedded as base64. It is the shareable preview page (published as a claude.ai artifact for M0),
+// embedded as base64. It is the shareable preview page (published as a claude.ai artifact),
 // and the same shape a native host can load with no file server.
 //   npm run build && node tools/build_single.mjs   ->  dist-single/cosmic-shore-screensaver.html
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
@@ -19,7 +19,7 @@ for (const f of await readdir(content)) {
 }
 
 const page = `<title>Cosmic Shore Screensaver</title>
-<meta name="description" content="Live preview of the Cosmic Shore screensaver, milestone M0.">
+<meta name="description" content="Live preview of the Cosmic Shore screensaver.">
 <style>
   :root { --bg: #020108; --fg: #c9d4ee; --muted: #8fa3c8; --btn: rgba(12, 18, 40, .72); --btn-edge: rgba(120, 150, 220, .35); color-scheme: dark; }
   html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); overflow: hidden; }

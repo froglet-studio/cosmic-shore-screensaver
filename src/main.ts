@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { loadGarland } from './garland';
 import { loadVessel } from './vessel';
-import { makeSky } from './sky';
+import { Sky } from './sky';
+import { GamePostPass } from './post';
+import { loadNucleus, makeMembrane } from './shell';
 import { DOMAINS, JADE } from './palette';
 import { Rng } from './rng';
 import { Crystal, CRYSTAL_HIT_RADIUS } from './crystal';
@@ -25,8 +26,9 @@ let view: 'lavalamp' | 'vessel' = params.get('view') === 'vessel' ? 'vessel' : '
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+// The game renders HDR in linear space with no tonemapping (URP_Asset: colour grading LDR, no Tonemapping
+// override in the profile), so values above 1 clip at the output, as they do in the game.
+renderer.toneMapping = THREE.NoToneMapping;
 renderer.info.autoReset = false;
 document.body.appendChild(renderer.domElement);
 
@@ -39,33 +41,32 @@ const sun = new THREE.DirectionalLight(0xffffff, 0.8);
 sun.position.set(1, 0.6, 0.3);
 scene.add(sun);
 
-const sky = makeSky();
-sky.scale.setScalar(4000);
-scene.add(sky);
+const sky = new Sky();
+sky.bakeAll(renderer, 0);
+scene.background = sky.texture;
 
-// Nucleus stand-in: the game's cage sits at scale 400 with a control radius of 392.
-const nucleus = new THREE.LineSegments(
-  new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(380, 2)),
-  new THREE.LineBasicMaterial({ color: new THREE.Color(0.05, 0.12, 0.35), transparent: true, opacity: 0.5 }),
-);
-scene.add(nucleus);
+// The cell's shell: the nucleus cage and the capsule membrane (src/shell.ts)
+const membrane = makeMembrane();
+scene.add(membrane);
 
-// ── post: the game's profile is Bloom (threshold 0.2, intensity 2.5) + Panini (0.7) ────────
+// ── post: the game's profile (URP bloom + Panini, src/post.ts), then linear -> sRGB ─────────
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.9, 0.55, 0.55);
-composer.addPass(bloom);
+composer.addPass(new GamePostPass(camera));
 composer.addPass(new OutputPass());
 
 // ── content ───────────────────────────────────────────────────────────────────────────────
-const [garland, vessel] = await Promise.all([
+const [garland, vessel, nucleus] = await Promise.all([
   loadGarland(),
   loadVessel('squirrel.glb', DOMAINS[JADE]),
+  loadNucleus(),
 ]);
+scene.add(nucleus);
 scene.add(garland);
 
 const rng = new Rng(SEED);
 const crystal = new Crystal(rng);
+await crystal.load();
 scene.add(crystal.object);
 
 // The exported GLB already has its nose on +z (the Squirrel dossier: nose +1.89, tail tip -4.56),
@@ -100,7 +101,12 @@ function lookTowards(target: THREE.Vector3, sharpness: number, dt: number) {
   else camera.quaternion.slerp(lookQ, 1 - Math.exp(-sharpness * dt));
 }
 function poseCamera(t: number, dt: number) {
-  if (view === 'lavalamp') {
+  if (params.has('crystalcam')) {
+    // debug: a close orbit of the crystal
+    const a = THREE.MathUtils.degToRad(10 * t);
+    camera.position.set(crystal.position.x + Math.cos(a) * 30, crystal.position.y + 8, crystal.position.z + Math.sin(a) * 30);
+    lookTowards(crystal.position, 0, dt);
+  } else if (view === 'lavalamp') {
     tmp.copy(LL_START).applyAxisAngle(LL_AXIS, THREE.MathUtils.degToRad(LL_DEG_PER_S * t)).multiplyScalar(LL_RADIUS);
     camera.position.set(tmp.x, tmp.y + 30, tmp.z);
     lookTowards(crystal.position, LL_LOOK_SHARPNESS, dt);
@@ -175,6 +181,8 @@ renderer.setAnimationLoop(() => {
   trail.update(t, pilot.position, pilot.object.quaternion);
   poseCamera(t, step);
   renderer.info.reset();
+  sky.update(renderer, t);
+  (membrane.material as THREE.ShaderMaterial).uniforms.uTime.value = t;
   composer.render(dt);
   frames++;
   if (DEBUG && t - fpsT >= 1) {

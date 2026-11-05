@@ -4,9 +4,10 @@ A standalone, lightweight screensaver of the Cosmic Shore Home screen: vessels c
 through the Garland garden. It runs with no game, no Unity, no account and no network.
 
 - **Plan:** [docs/PHASE1_ASSESSMENT_AND_PLAN.md](docs/PHASE1_ASSESSMENT_AND_PLAN.md)
-- **Status:** M1. The Squirrel flies the game's AI steering law after the Omni crystal, lays its two-rail
-  prism trail into a fixed ring, and the LavaLamp camera orbits the Garland (4,259 prisms from the game's own
-  generator) aimed at the crystal.
+- **Status:** M2 in progress. The Squirrel flies the game's AI steering law after the Omni crystal through the
+  Garland, and the look is now ported from the game's own shaders: the HyperSea sky, the prism, Omni crystal,
+  nucleus and membrane shaders, and URP's bloom and Panini lens with the game's numbers. The side-by-side check
+  against Unity stills is next (`docs/M2_UNITY_CAPTURES.md`).
 
 ## See it without installing anything
 

@@ -10,60 +10,65 @@ interface GarlandMeta {
 }
 
 /**
- * The prism look shared by the Garland and every trail: a dark face (OutsideBlockColor) with bright HDR
- * edges (InsideBlockColor) that bloom picks up. Per-instance colours come from aInside / aOutside.
- * An M0 stand-in for the game's BlockGraph; M2 matches it to Unity.
+ * The prism look shared by the Garland and every trail, ported from the game's BlockGraph (an Unlit URP
+ * Shader Graph): BlockGraph -> PrismSubGraph -> DistanceSpreadAndColors -> FresnelColors -> FresnelPower4.
+ *
+ *   rim     = lerp(Bright, Dark, min(d² / _SqrDistance, 1) * 0.9)     d = camera-to-prism distance
+ *   fresnel = (1 - x)^4, x = N·V, or (N·V + 1) * 0.2 on a face turned away
+ *   colour  = lerp(Dark, rim, fresnel)
+ *
+ * Bright is the colour set's InsideBlockColor and Dark its OutsideBlockColor (aInside / aOutside per
+ * instance). ThemeManager hands them to the material with Material.SetColor, which in the game's linear colour
+ * space converts them from gamma, so the shader does the same. _SqrDistance is 100,000 on every prism material
+ * (PrismMaterial, Shielded, SuperShielded), so beyond ~316 units the rim is 90% of the way to the base: a far
+ * prism reads by its faces, and the near ones light up as the camera comes close. The vertex effects of the
+ * graph (grow, sway, jiggle, flight, suction) are not on the Home screen at rest and are left out.
  */
+export const PRISM_SQR_DISTANCE = 100000;
+
 export function makePrismMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
+    uniforms: { uSqrDistance: { value: PRISM_SQR_DISTANCE } },
     vertexShader: /* glsl */ `
       attribute vec3 aInside;
       attribute vec3 aOutside;
-      varying vec3 vInside;
-      varying vec3 vOutside;
-      varying vec3 vLocal;
-      varying vec3 vScale;
-      varying vec3 vNormalV;
-      varying vec3 vViewDir;
+      uniform float uSqrDistance;
+      varying vec3 vRim;
+      varying vec3 vDark;
+      varying vec3 vNormalW;
+      varying vec3 vPosW;
+      vec3 gammaToLinear(vec3 c) {
+        return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
+      }
       void main() {
-        vInside = aInside;
-        vOutside = aOutside;
-        vLocal = position;
-        vScale = vec3(length(instanceMatrix[0].xyz), length(instanceMatrix[1].xyz), length(instanceMatrix[2].xyz));
-        vec4 mv = modelViewMatrix * instanceMatrix * vec4(position, 1.0);
-        vNormalV = normalize(normalMatrix * mat3(instanceMatrix) * normal);
-        vViewDir = normalize(-mv.xyz);
-        gl_Position = projectionMatrix * mv;
+        vec3 bright = gammaToLinear(aInside);
+        vDark = gammaToLinear(aOutside);
+        vec4 objW = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        vec3 toCam = cameraPosition - objW.xyz;
+        float k = min(dot(toCam, toCam) / uSqrDistance, 1.0) * 0.9;
+        vRim = mix(bright, vDark, k);
+        vec4 w = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        vPosW = w.xyz;
+        vNormalW = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * normal);
+        gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: /* glsl */ `
-      varying vec3 vInside;
-      varying vec3 vOutside;
-      varying vec3 vLocal;
-      varying vec3 vScale;
-      varying vec3 vNormalV;
-      varying vec3 vViewDir;
+      varying vec3 vRim;
+      varying vec3 vDark;
+      varying vec3 vNormalW;
+      varying vec3 vPosW;
       void main() {
-        // distance to the nearest edge of this face, in world units
-        vec3 d = (0.5 - abs(vLocal)) * vScale;
-        float a = min(d.x, d.y);
-        float b = min(d.y, d.z);
-        float c = min(d.x, d.z);
-        vec3 an = abs(vLocal);
-        float edge = an.x > an.y && an.x > an.z ? b : (an.y > an.z ? c : a);
-        float w = fwidth(edge) * 1.5 + 0.18;
-        float rim = 1.0 - smoothstep(0.0, w, edge);
-        float fres = pow(1.0 - abs(dot(normalize(vNormalV), normalize(vViewDir))), 2.0);
-        vec3 col = mix(vOutside, vInside, clamp(rim + fres * 0.35, 0.0, 1.0));
-        gl_FragColor = vec4(col, 1.0);
+        vec3 v = normalize(cameraPosition - vPosW);
+        float x = dot(normalize(vNormalW), v);
+        x = x > 0.0 ? x : (x + 1.0) * 0.2;
+        float f = (1.0 - x) * (1.0 - x);
+        f *= f;
+        gl_FragColor = vec4(mix(vDark, vRim, f), 1.0);
         #include <colorspace_fragment>
       }`,
   });
 }
 
-/**
- * The Garland environment: 4,259 prisms exported from the game's own generator model
- * (tools/export/export_garland.py), drawn as ONE instanced box mesh.
- */
 export async function loadGarland(): Promise<THREE.InstancedMesh> {
   const [meta, buf] = await Promise.all([loadJson<GarlandMeta>('garland.json'), loadBytes('garland.bin')]);
   const n = meta.count;

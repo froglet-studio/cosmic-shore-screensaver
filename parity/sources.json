@@ -42,13 +42,18 @@
       "what": "How a prism is shaded (base face, fresnel rim, edge glow, grow-in). The screensaver re-authors it in GLSL, so a change here is a hand port.",
       "game": [
         "Assets/_Graphics/Materials/Graphs/BlockGraph.shadergraph",
-        "Docs/PALETTE.md"
+        "Docs/PALETTE.md",
+        "Assets/_Graphics/Materials/Graphs/PrismGraphs/Subgraphs/PrismSubGraph.shadersubgraph",
+        "Assets/_Graphics/Materials/Graphs/DistanceSpreadAndColors.shadersubgraph",
+        "Assets/_Graphics/Materials/Graphs/PrismGraphs/Subgraphs/FresnelColors.shadersubgraph",
+        "Assets/_Graphics/Materials/Graphs/FresnelPower4.shadersubgraph",
+        "Assets/_Graphics/Materials/BlockMaterials/PrismMaterial.mat"
       ],
       "screensaver": [
         "src/garland.ts"
       ],
-      "sync": "Hand port; compare with Unity stills (plan M2).",
-      "synced_at": "38ed172e6dd04177cbea4c36c76df9bcbf3d9ce4"
+      "sync": "Hand port of the graph chain into makePrismMaterial (src/garland.ts); compare with Unity stills (plan M2).",
+      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
     },
     {
       "id": "skybox",
@@ -59,23 +64,26 @@
         "Assets/Resources/PlatformSkyboxes/StaticHyperSeaSkybox.mat"
       ],
       "screensaver": [
-        "src/sky.ts"
+        "src/sky.ts",
+        "src/sky_shader.ts"
       ],
-      "sync": "Hand port of the shader; copy the material's values.",
-      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+      "sync": "python3 tools/export/export_skybox.py --game-repo ../Cosmic-Shore (shader and material values, generated); src/sky.ts bakes it into a cube map.",
+      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
     },
     {
       "id": "post",
       "what": "Bloom and Panini projection from the game's post-processing profile.",
       "game": [
         "Assets/_Graphics/GamePlay PostProcessing Profile.asset",
-        "Assets/_Prefabs/Environment/PostProcessing.prefab"
+        "Assets/_Prefabs/Environment/PostProcessing.prefab",
+        "Assets/_Graphics/URP_Asset.asset"
       ],
       "screensaver": [
+        "src/post.ts",
         "src/main.ts"
       ],
-      "sync": "Copy the numbers by hand.",
-      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+      "sync": "Copy the numbers into BLOOM / PANINI in src/post.ts (the pass itself ports URP 17's Bloom.shader and PaniniProjection.shader).",
+      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
     },
     {
       "id": "camera",
@@ -116,11 +124,18 @@
         "Assets/_Prefabs/Environment/Nucleus.prefab",
         "Assets/_Prefabs/Environment/Cytoplasm/SnowChanger.prefab",
         "Assets/_Graphics/Materials/Graphs/SpindleGraph.shadergraph",
-        "Assets/_Graphics/Materials/Graphs/CageGraph.shadergraph"
+        "Assets/_Graphics/Materials/Graphs/CageGraph.shadergraph",
+        "Assets/_Graphics/Materials/CageMaterial.mat",
+        "Assets/_Graphics/Materials/SpindleMaterial.mat",
+        "Assets/_Scripts/Game/Environment/CapsuleMembrane.cs",
+        "Assets/_Models/Node2.fbx"
       ],
-      "screensaver": [],
-      "sync": "Not built yet (plan M2).",
-      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+      "screensaver": [
+        "src/shell.ts",
+        "public/content/nucleus.glb"
+      ],
+      "sync": "Mesh: tools/export/export_vessel.py --name nucleus --fbx Assets/_Models/Node2.fbx --no-anim. Shaders, colours and the membrane layout: hand port into src/shell.ts.",
+      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
     },
     {
       "id": "crystal",
@@ -131,13 +146,17 @@
         "Assets/_Graphics/Materials/Shaders/OmniCrystalFresnelShader.shader",
         "Assets/_Graphics/Materials/Shaders/OmniDepthPrismShader.shader",
         "Assets/_Graphics/Materials/Shaders/CrystalChargeArcsShader.shader",
-        "Assets/_Graphics/Materials/CrystalMaterials/"
+        "Assets/_Graphics/Materials/CrystalMaterials/",
+        "Assets/_Prefabs/Environment/OmniCrystalBody.prefab",
+        "Assets/_Models/OmniCrystalExport1_8-21-25.fbx",
+        "Assets/_Scripts/Utility/CrystalElementPlates.cs"
       ],
       "screensaver": [
-        "src/crystal.ts"
+        "src/crystal.ts",
+        "public/content/crystal.glb"
       ],
-      "sync": "Hand port (plan M2).",
-      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+      "sync": "Mesh: tools/export/export_vessel.py --name crystal --fbx Assets/_Models/OmniCrystalExport1_8-21-25.fbx --no-anim. Shader and colours: hand port into src/crystal.ts.",
+      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
     },
     {
       "id": "squirrel",

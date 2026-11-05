@@ -291,6 +291,19 @@ as Home" becomes something we can judge.
     prisms (about 107 s of flight); the oldest 80 shrink away as new ones are laid.
   - *Camera.* LavaLamp position on its orbit; the look turns toward the crystal at `rotationSharpness`
     0.45 (`MenuCam_LavaLamp1.asset`), so the shot drifts slowly after each relocation.
+- **As built in M2** (ported from the game, 2026-11-05, game `15f1d3ae`):
+  - *Colour.* The game renders HDR in linear space with **no tonemapping** (URP_Asset: LDR grading; no Tonemapping
+    override), so the screensaver uses none either. Material colours are converted from gamma as Unity does.
+  - *Sky.* `HyperSeaSkybox.shader` translated to GLSL by `tools/export/export_skybox.py`, baked into a 1024 cube
+    map (as the game's own low-tier `StaticHyperSeaSkybox` does), one face re-baked per second.
+  - *Post.* URP 17's bloom (threshold 0.2 → 0.033 linear, clamp 0.5, intensity 2.5, scatter 0.7, 4 mips at
+    half res) and Panini projection (0.7, crop to fit), ported from `Bloom.shader` / `PaniniProjection.shader`.
+  - *Prisms.* BlockGraph is Unlit: `lerp(Dark, rim, (1 − N·V)⁴)` with the rim dimmed 90% toward the base past
+    ~316 units (`_SqrDistance` 100,000). There is no edge line: a far prism reads by its faces.
+  - *Crystal.* The Omni body mesh with `OmniCrystalFresnelShader` (dark facing, lime silhouette, a lime shade per
+    element plate). Its charge arcs and depth prisms are not ported yet.
+  - *Shell.* The nucleus (`Node2.fbx`, CageGraph at 10% alpha) and the 2,562-capsule membrane (SpindleGraph's
+    distance-faded Voronoi, which leaves the membrane nearly invisible from inside, as in the game).
 - **Camera:** LavaLamp1 by default (686 u, 2.83°/s, aimed at the crystal), with slow glides to an orbit and
   a cinematic-trail framing every ~45 s, as the game does. TopDown and ChaseTight are probably too busy;
   we decide at M2.

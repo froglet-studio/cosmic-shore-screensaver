@@ -24,7 +24,21 @@ Plain Python 3. It reads the colour set the game paints with (the `ColorSet` fie
 `ThemeManagerDataContainer.asset`; Nocturne since 2026-11-03), not a file name. `--set photic` or
 `--set dartfrog` writes another set from the game's `ColorSetCatalog`. See `parity/PARITY.md` for when to run it.
 
-## Vessels and fauna
+## Sky
+
+```bash
+python3 tools/export/export_skybox.py --game-repo ../Cosmic-Shore          # write src/sky_shader.ts
+python3 tools/export/export_skybox.py --game-repo ../Cosmic-Shore --check  # exit 1 on drift
+```
+
+Plain Python 3. Translates the CGINCLUDE block of `HyperSeaSkybox.shader` (HLSL) into GLSL and takes the numbers
+from `Assets/_Graphics/Skyboxes/HyperSeaSkybox.mat`, the material Menu_Main paints with; colours are converted to
+linear as the game's linear colour space does.
+
+## Vessels, fauna, the crystal and the nucleus
+
+The same script exports any FBX: `--name crystal --fbx Assets/_Models/OmniCrystalExport1_8-21-25.fbx --no-anim`
+and `--name nucleus --fbx Assets/_Models/Node2.fbx --no-anim`.
 
 Needs Blender's Python module (`pip install bpy`; M0 used Blender 5.2.3 LTS on Python 3.13):
 
