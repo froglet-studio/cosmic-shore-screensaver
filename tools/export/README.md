@@ -13,6 +13,17 @@ Plain Python 3. It runs the game repo's own generator model unchanged and refuse
 model's prism count disagrees with the game's committed measurement of the shipped C#
 (`Tools/Build/garland_measurements.json`).
 
+## Palette
+
+```bash
+python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore          # write src/palette.ts
+python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore --check  # exit 1 on drift
+```
+
+Plain Python 3. It reads the colour set the game paints with (the `ColorSet` field of
+`ThemeManagerDataContainer.asset`; Nocturne since 2026-11-03), not a file name. `--set photic` or
+`--set dartfrog` writes another set from the game's `ColorSetCatalog`. See `parity/PARITY.md` for when to run it.
+
 ## Vessels and fauna
 
 Needs Blender's Python module (`pip install bpy`; M0 used Blender 5.2.3 LTS on Python 3.13):
