@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makePrismMaterial } from './garland';
+import { makePrismGeometry, makePrismMaterial } from './garland';
 import type { DomainColors } from './palette';
 
 /**
@@ -36,7 +36,7 @@ export class Trail {
   private hasLast = false;
 
   constructor(readonly capacity: number, domain: DomainColors) {
-    const geo = new THREE.BoxGeometry(1, 1, 1);
+    const geo = makePrismGeometry();
     const inside = new Float32Array(capacity * 3);
     const outside = new Float32Array(capacity * 3);
     for (let i = 0; i < capacity; i++) {

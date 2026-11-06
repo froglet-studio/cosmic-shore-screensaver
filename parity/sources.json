@@ -39,7 +39,7 @@
     },
     {
       "id": "prism-look",
-      "what": "How a prism is shaded (base face, fresnel rim, edge glow, grow-in). The screensaver re-authors it in GLSL, so a change here is a hand port.",
+      "what": "How a prism is shaded (base face, fresnel rim, edge glow, grow-in). The screensaver re-authors it in GLSL, so a change here is a hand port; the face spread that opens far prisms into plates, on the game's 4-triangles-per-face prism mesh, drawn double-sided.",
       "game": [
         "Assets/_Graphics/Materials/Graphs/BlockGraph.shadergraph",
         "Docs/PALETTE.md",
@@ -47,13 +47,16 @@
         "Assets/_Graphics/Materials/Graphs/DistanceSpreadAndColors.shadersubgraph",
         "Assets/_Graphics/Materials/Graphs/PrismGraphs/Subgraphs/FresnelColors.shadersubgraph",
         "Assets/_Graphics/Materials/Graphs/FresnelPower4.shadersubgraph",
-        "Assets/_Graphics/Materials/BlockMaterials/PrismMaterial.mat"
+        "Assets/_Graphics/Materials/BlockMaterials/PrismMaterial.mat",
+        "Assets/_Graphics/Materials/Graphs/SpreadSubGraph.shadersubgraph",
+        "Assets/_Graphics/Materials/Graphs/PrismGraphs/Subgraphs/TangentSlider.shadersubgraph",
+        "Assets/_Models/Testing/Prism.asset"
       ],
       "screensaver": [
         "src/garland.ts"
       ],
       "sync": "Hand port of the graph chain into makePrismMaterial (src/garland.ts); compare with Unity stills (plan M2).",
-      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
+      "synced_at": "388e0b3b0fb8d413a932f530b1791a5e74ce6872"
     },
     {
       "id": "skybox",
@@ -68,7 +71,7 @@
         "src/sky_shader.ts"
       ],
       "sync": "python3 tools/export/export_skybox.py --game-repo ../Cosmic-Shore (shader and material values, generated); src/sky.ts bakes it into a cube map.",
-      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
+      "synced_at": "388e0b3b0fb8d413a932f530b1791a5e74ce6872"
     },
     {
       "id": "post",
@@ -156,7 +159,7 @@
         "public/content/crystal.glb"
       ],
       "sync": "Mesh: tools/export/export_vessel.py --name crystal --fbx Assets/_Models/OmniCrystalExport1_8-21-25.fbx --no-anim. Shader and colours: hand port into src/crystal.ts.",
-      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
+      "synced_at": "388e0b3b0fb8d413a932f530b1791a5e74ce6872"
     },
     {
       "id": "squirrel",
