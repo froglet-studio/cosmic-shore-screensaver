@@ -7,8 +7,8 @@
 Reads parity/sources.json. For every item the screensaver has built, it lists the game commits that
 touched that item's game paths since the item's synced_at commit, and flags game paths that no longer
 exist (a rename or a move breaks an exporter silently). Two items are checked by value, not by history:
-the palette (tools/export/export_palette.py --check), the sky (tools/export/export_skybox.py --check) and the
-Garland generator (its source hash).
+the palette (tools/export/export_palette.py --check), the sky (tools/export/export_skybox.py --check), the
+crystal's effects (tools/export/export_crystal_fx.py --check) and the Garland generator (its source hash).
 
 --mark-synced moves those items' synced_at to the game repo's HEAD. Run it only after the screensaver
 matches the game for those items. Plain Python 3, no dependencies; it only reads the game repo.
@@ -61,7 +61,13 @@ def auto_skybox(repo):
     return r.returncode == 0, "skybox: " + (r.stdout.strip() or r.stderr.strip())
 
 
-AUTO = {"palette": auto_palette, "garland": auto_garland, "skybox": auto_skybox}
+def auto_crystal_fx(repo):
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "export", "export_crystal_fx.py"),
+                        "--game-repo", repo, "--check"], capture_output=True, text=True)
+    return r.returncode == 0, "crystal fx: " + (r.stdout.strip() or r.stderr.strip())
+
+
+AUTO = {"palette": auto_palette, "garland": auto_garland, "skybox": auto_skybox, "crystal-fx": auto_crystal_fx}
 
 
 def main():

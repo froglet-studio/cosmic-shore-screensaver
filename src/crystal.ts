@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Rng } from './rng';
 import { loadBytes } from './content';
+import { ChargeArcs, DepthPrisms, plateIndex } from './crystal_fx';
 
 /**
  * The Home screen's one Omni crystal.
@@ -34,10 +35,13 @@ const OMNI = {
  *   colour = lerp(elementBright, _DarkColor, (1 + V·N) / 2)
  * so the faces turned to the camera are near-black and the silhouette glows lime. Each of the 122 plates gets
  * its element by its corner count, as CrystalElementPlates classifies them: 10 corners Charge, 6 Mass, 8 at one
- * distance from the centre Space, 8 at two distances (a rhombus) Time. The charge arcs and depth prisms
- * (OmniChargeArcs, OmniCrystalTriangles) are not ported yet.
+ * distance from the centre Space, 8 at two distances (a rhombus) Time.
+ *
+ * The 20 Mass triangles are cut out of the body, as CrystalDepthPrisms hides them: in their place stand the
+ * depth prisms (OmniCrystalTriangles), which lift out of the body on the side away from the camera and seal
+ * back in as it comes round (see crystal_fx.ts). The uncut geometry is returned too, for the charge arcs.
  */
-async function loadCrystalBody(): Promise<THREE.Mesh> {
+async function loadCrystalBody(): Promise<{ mesh: THREE.Mesh; full: THREE.BufferGeometry }> {
   const gltf = await new GLTFLoader().parseAsync(await loadBytes('crystal.glb'), '');
   let mesh: THREE.Mesh | null = null;
   gltf.scene.traverse((o) => {
@@ -48,6 +52,8 @@ async function loadCrystalBody(): Promise<THREE.Mesh> {
   m.updateWorldMatrix(true, false);
   const geo = m.geometry.clone().applyMatrix4(m.matrixWorld);
   geo.setAttribute('aBright', new THREE.BufferAttribute(plateColours(geo), 3));
+  const full = geo.clone();
+  cutPlates(geo, 6);
   // Cull Off, as the game's pass: through the gaps between plates you see the far plates' inner faces, which
   // turn away from the camera and so wear the bright lime, the look the Home screen's crystal has.
   const material = new THREE.ShaderMaterial({
@@ -81,7 +87,20 @@ async function loadCrystalBody(): Promise<THREE.Mesh> {
         #include <colorspace_fragment>
       }`,
   });
-  return new THREE.Mesh(geo, material);
+  return { mesh: new THREE.Mesh(geo, material), full };
+}
+
+/** Drop every triangle of the plates with `corners` corners from the draw. */
+function cutPlates(geo: THREE.BufferGeometry, corners: number): void {
+  const { plateOf, cornersOf } = plateIndex(geo);
+  const n = geo.attributes.position.count;
+  const src = geo.index ? Array.from(geo.index.array) : Array.from({ length: n }, (_, i) => i);
+  const keep: number[] = [];
+  for (let t = 0; t < src.length; t += 3) {
+    if (cornersOf.get(plateOf[src[t]])!.length === corners) continue;
+    keep.push(src[t], src[t + 1], src[t + 2]);
+  }
+  geo.setIndex(keep);
 }
 
 /** The bright colour of every vertex, by the element of the plate it belongs to. */
@@ -142,6 +161,9 @@ export class Crystal {
   readonly object = new THREE.Group();
   private readonly body = new THREE.Group();
   private pop = 1; // 0..1, the grow-in after a relocation
+  private prisms: DepthPrisms | null = null;
+  arcs: ChargeArcs | null = null;
+  private readonly eye = new THREE.Vector3();
 
   constructor(private readonly rng: Rng) {
     this.object.add(this.body);
@@ -151,16 +173,22 @@ export class Crystal {
     this.pop = 1;
   }
 
-  /** Load the body mesh; until then the crystal is an empty marker the pilot still chases. */
+  /** Load the body mesh, its depth prisms and its charge arcs; until then the crystal is an empty marker. */
   async load(): Promise<void> {
-    this.body.add(await loadCrystalBody());
+    const [{ mesh, full }, prisms] = await Promise.all([loadCrystalBody(), DepthPrisms.load()]);
+    this.body.add(mesh);
+    this.prisms = prisms;
+    this.body.add(prisms.object);
+    this.arcs = new ChargeArcs(full, Math.floor(this.rng.next() * 2 ** 31));
+    this.body.add(this.arcs.object);
+    full.dispose();
   }
 
   get position(): THREE.Vector3 {
     return this.object.position;
   }
 
-  /** Move to a new random spot in the nucleus ball, at least 5 units from the old one. */
+  /** Move to a new random spot in the nucleus ball, at least 5 units from the old one, in a new random pose. */
   relocate(): void {
     const last = this.object.position.clone();
     const p = new THREE.Vector3();
@@ -174,13 +202,24 @@ export class Crystal {
       if (p.distanceToSquared(last) > 25) break;
     }
     this.object.position.copy(p);
+    // The crystal holds still; each one gets its own pose (CrystalDepthPrisms orientationJitter 1)
+    const q = new THREE.Quaternion(this.rng.range(-1, 1), this.rng.range(-1, 1), this.rng.range(-1, 1), this.rng.range(-1, 1));
+    this.body.quaternion.copy(q.lengthSq() > 1e-6 ? q.normalize() : new THREE.Quaternion());
+    this.prisms?.reset();
     this.pop = 0;
   }
 
-  update(dt: number, t: number): void {
-    this.body.rotation.y = t * 0.3;
+  /** Step the grow-in, the depth prisms and the charge arcs against a camera at `cameraWorld`. */
+  update(dt: number, cameraWorld: THREE.Vector3): void {
     this.pop = Math.min(1, this.pop + dt / 0.6);
     const k = 1 - Math.pow(1 - this.pop, 3);
     this.body.scale.setScalar(10 * Math.max(0.001, k));
+    this.object.updateMatrixWorld(true);
+    if (this.prisms) this.prisms.update(this.prisms.object.worldToLocal(this.eye.copy(cameraWorld)), dt);
+    if (this.arcs) {
+      this.arcs.update(dt, this.body.worldToLocal(this.eye.copy(cameraWorld)), this.prisms, this.prisms?.object.matrix ?? null);
+      // the arcs' strikes light the raised prisms: push them into the prisms' state for this frame
+      this.prisms?.syncStrike();
+    }
   }
 }

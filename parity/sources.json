@@ -159,7 +159,36 @@
         "public/content/crystal.glb"
       ],
       "sync": "Mesh: tools/export/export_vessel.py --name crystal --fbx Assets/_Models/OmniCrystalExport1_8-21-25.fbx --no-anim. Shader and colours: hand port into src/crystal.ts.",
-      "synced_at": "388e0b3b0fb8d413a932f530b1791a5e74ce6872"
+      "synced_at": "8b93a0b104ffaa2ccef7cfe4fbe91c5f74671a2b"
+    },
+    {
+      "id": "crystal-fx",
+      "what": "The Omni crystal's two live effects: the 20 Mass triangles that lift out of the body on the far side and seal back in as the camera comes round (depth prisms), and the white Charge arcs that jump pentagon to pentagon. Numbers and the prism mesh are exported; the motion rules and shaders are hand ports.",
+      "game": [
+        "Assets/_Models/OmniCrystalTriangles.asset",
+        "Assets/_Prefabs/Environment/OmniCrystalTriangles.prefab",
+        "Assets/_Graphics/Materials/CrystalMaterials/OmniDepthPrisms.mat",
+        "Assets/_SO_Assets/Environment/CrystalDepthPrismProfile.asset",
+        "Assets/_Graphics/Materials/CrystalMaterials/OmniChargeArcs.mat",
+        "Assets/_SO_Assets/Environment/CrystalChargeArcsProfile.asset",
+        "Assets/_SO_Assets/Environment/OmniCrystalCadence.asset",
+        "Assets/_Graphics/Materials/Shaders/OmniDepthPrismShader.shader",
+        "Assets/_Graphics/Materials/Shaders/CrystalChargeArcsShader.shader",
+        "Assets/_Scripts/Controller/Environment/Crystals/CrystalDepthPrisms.cs",
+        "Assets/_Scripts/Controller/Environment/Crystals/CrystalChargeArcs.cs",
+        "Assets/_Scripts/Utility/ChargeArcs.cs",
+        "Assets/_Scripts/Utility/DepthRatchet.cs",
+        "Assets/_Scripts/Utility/CrystalElementPlates.cs"
+      ],
+      "screensaver": [
+        "tools/export/export_crystal_fx.py",
+        "public/content/crystal_prisms.json",
+        "src/crystal_fx_data.ts",
+        "src/crystal_fx.ts",
+        "src/crystal.ts"
+      ],
+      "sync": "Run tools/export/export_crystal_fx.py (the auto check runs its --check). A change to a .cs or .shader file is a hand port into src/crystal_fx.ts.",
+      "synced_at": "8b93a0b104ffaa2ccef7cfe4fbe91c5f74671a2b"
     },
     {
       "id": "squirrel",
@@ -187,7 +216,7 @@
         "src/pilot.ts"
       ],
       "sync": "Read the change; port only steering that shows on screen.",
-      "synced_at": "4d906ea1f31aa9ca6068c83c389060a5bcff141d"
+      "synced_at": "8b93a0b104ffaa2ccef7cfe4fbe91c5f74671a2b"
     },
     {
       "id": "manta",
