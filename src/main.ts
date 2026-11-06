@@ -50,7 +50,14 @@ const membrane = makeMembrane();
 scene.add(membrane);
 
 // ── post: the game's profile (URP bloom + Panini, src/post.ts), then linear -> sRGB ─────────
-const composer = new EffectComposer(renderer);
+// URP_Asset renders with 4x MSAA at render scale 1. The composer draws the scene into its own target, where the
+// canvas's antialias flag does not reach, so the target carries the samples itself (WebGL2 multisampling).
+const sceneTarget = new THREE.WebGLRenderTarget(
+  innerWidth * renderer.getPixelRatio(),
+  innerHeight * renderer.getPixelRatio(),
+  { type: THREE.HalfFloatType, samples: 4 },
+);
+const composer = new EffectComposer(renderer, sceneTarget);
 composer.addPass(new RenderPass(scene, camera));
 composer.addPass(new GamePostPass(camera));
 composer.addPass(new OutputPass());
@@ -68,6 +75,7 @@ const rng = new Rng(SEED);
 const crystal = new Crystal(rng);
 await crystal.load();
 scene.add(crystal.object);
+if (params.has('debug')) (window as unknown as { __crystal: Crystal }).__crystal = crystal;
 
 // The exported GLB already has its nose on +z (the Squirrel dossier: nose +1.89, tail tip -4.56),
 // the same as the pilot's frame, so the model needs no turn.
@@ -110,7 +118,8 @@ function poseCamera(t: number, dt: number) {
   } else if (params.has('crystalcam')) {
     // debug: a close orbit of the crystal
     const a = THREE.MathUtils.degToRad(10 * t);
-    camera.position.set(crystal.position.x + Math.cos(a) * 30, crystal.position.y + 8, crystal.position.z + Math.sin(a) * 30);
+    const r = Number(params.get('crystalcam')) || 30;
+    camera.position.set(crystal.position.x + Math.cos(a) * r, crystal.position.y + r * 0.27, crystal.position.z + Math.sin(a) * r);
     lookTowards(crystal.position, 0, dt);
   } else if (view === 'lavalamp') {
     tmp.copy(LL_START).applyAxisAngle(LL_AXIS, THREE.MathUtils.degToRad(LL_DEG_PER_S * t)).multiplyScalar(LL_RADIUS);
@@ -170,6 +179,7 @@ const hud = document.getElementById('hud')!;
 const clock = new THREE.Clock();
 let last = -1;
 let frames = 0;
+let crystalMs = 0;
 let fpsT = 0;
 const minDt = 1 / FPS_CAP;
 renderer.setAnimationLoop(() => {
@@ -183,16 +193,19 @@ renderer.setAnimationLoop(() => {
     crystal.relocate();
     collected++;
   }
-  crystal.update(step, t);
   trail.update(t, pilot.position, pilot.object.quaternion);
   poseCamera(t, step);
+  const c0 = performance.now();
+  crystal.update(step, camera.position);
+  crystalMs += performance.now() - c0;
   renderer.info.reset();
   sky.update(renderer, t);
   (membrane.material as THREE.ShaderMaterial).uniforms.uTime.value = t;
   composer.render(dt);
   frames++;
   if (DEBUG && t - fpsT >= 1) {
-    hud.textContent = `${frames} fps · ${garland.count + trail.mesh.count} prisms · ${collected} crystals · ${renderer.info.render.calls} draws · ${renderer.info.render.triangles.toLocaleString()} tris`;
+    hud.textContent = `${frames} fps · ${garland.count + trail.mesh.count} prisms · ${collected} crystals · ${renderer.info.render.calls} draws · ${renderer.info.render.triangles.toLocaleString()} tris · crystal ${(crystalMs / Math.max(frames, 1)).toFixed(1)} ms`;
+    crystalMs = 0;
     frames = 0;
     fpsT = t;
   }

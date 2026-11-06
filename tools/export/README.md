@@ -35,6 +35,17 @@ Plain Python 3. Translates the CGINCLUDE block of `HyperSeaSkybox.shader` (HLSL)
 from `Assets/_Graphics/Skyboxes/HyperSeaSkybox.mat`, the material Menu_Main paints with; colours are converted to
 linear as the game's linear colour space does.
 
+## The crystal's effects (Mass triangles and Charge arcs)
+
+```bash
+python3 tools/export/export_crystal_fx.py --game-repo ../Cosmic-Shore          # write crystal_prisms.json, src/crystal_fx_data.ts
+python3 tools/export/export_crystal_fx.py --game-repo ../Cosmic-Shore --check  # exit 1 on drift
+```
+
+Plain Python 3. Reads the 20-prism mesh `OmniCrystalTriangles.asset` (mapped into the body's axes by matching its plates
+against crystal.glb's own six-corner plates), the depth-prism material and profile, the charge-arc material and profile
+and the crystal cadence. The motion rules (DepthRatchet, ChargeArcs) are hand-ported in `src/crystal_fx.ts`.
+
 ## Vessels, fauna, the crystal and the nucleus
 
 The same script exports any FBX: `--name crystal --fbx Assets/_Models/OmniCrystalExport1_8-21-25.fbx --no-anim`
