@@ -1,58 +1,84 @@
 import * as THREE from 'three';
+import { SKY_GLSL, SKY_VALUES } from './sky_shader';
 
 /**
- * M0 stand-in for the game's HyperSea skybox (CosmicShore/HyperSeaSkybox, 773 lines of HLSL).
- * It carries the same deep colour, a galactic band along the same plane normal and a hashed
- * star field, so the scene reads right while the real port waits for M2.
+ * The game's HyperSea sky (src/sky_shader.ts, generated from HyperSeaSkybox.shader + its material).
+ *
+ * The full shader is costly per pixel (a 27-cell star search and a 27-cell Voronoi on top of ~30 noise
+ * lookups), and it changes only slowly (drift 0.1, star twinkle). So, like the game's own low-tier
+ * StaticHyperSeaSkybox, it is baked into a cube map, and the screensaver draws the cube map as the background.
+ * One face is re-baked per REFRESH_S seconds, so the slow drift still shows while the per-frame cost is one
+ * texture lookup.
  */
-export function makeSky(): THREE.Mesh {
-  const mat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    depthWrite: false,
-    uniforms: {
-      uDeep: { value: new THREE.Color(0.008, 0.005, 0.035) },
-      uBand: { value: new THREE.Color(0.3773585, 0.26409683, 0.11510615) },
-      uNebula: { value: new THREE.Color(0.023529422, 0.027056675, 0.5176471) },
-      // Unity (0.1, 1, 0.15) with z negated for three.js
-      uGalNormal: { value: new THREE.Vector3(0.1, 1, -0.15).normalize() },
-    },
-    vertexShader: /* glsl */ `
-      varying vec3 vDir;
-      void main() {
-        vDir = normalize(position);
-        vec4 p = projectionMatrix * mat4(mat3(modelViewMatrix)) * vec4(position, 1.0);
-        gl_Position = p.xyww;
-      }`,
-    fragmentShader: /* glsl */ `
-      uniform vec3 uDeep; uniform vec3 uBand; uniform vec3 uNebula; uniform vec3 uGalNormal;
-      varying vec3 vDir;
-      float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
-      float noise(vec3 p) {
-        vec3 i = floor(p); vec3 f = fract(p); f = f * f * (3.0 - 2.0 * f);
-        return mix(mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x), mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
-                   mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x), mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
-      }
-      void main() {
-        vec3 d = normalize(vDir);
-        float g = abs(dot(d, uGalNormal));
-        float n = noise(d * 6.0) * 0.6 + noise(d * 13.4) * 0.4;
-        float band = exp(-g * g / 0.012) * (0.55 + 0.45 * n);
-        vec3 col = uDeep + uBand * band * 0.43 + uNebula * 0.4 * smoothstep(0.45, 0.9, noise(d * 2.5));
-        // hashed stars: one candidate per grid cell, drawn as a soft dot at a jittered centre
-        vec3 sp = d * 220.0;
-        vec3 cell = floor(sp);
-        float h = hash(cell);
-        vec3 centre = cell + 0.25 + 0.5 * vec3(hash(cell + 3.1), hash(cell + 5.7), hash(cell + 9.3));
-        float r = length(sp - centre);
-        float star = step(0.985 - band * 0.01, h) * smoothstep(0.16, 0.0, r) * (0.35 + 0.65 * hash(cell + 7.0));
-        col += vec3(0.85, 0.9, 1.0) * star * 0.9;
-        gl_FragColor = vec4(col, 1.0);
-        #include <colorspace_fragment>
-      }`,
-  });
-  const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), mat);
-  mesh.frustumCulled = false;
-  mesh.renderOrder = -1;
-  mesh.name = 'Sky';
-  return mesh;
+const FACE_SIZE = 1024;
+const REFRESH_S = 1.0;
+
+export class Sky {
+  readonly target: THREE.WebGLCubeRenderTarget;
+  private readonly bakeScene = new THREE.Scene();
+  private readonly cubeCamera: THREE.CubeCamera;
+  private readonly material: THREE.ShaderMaterial;
+  private face = 0;
+  private lastBake = -Infinity;
+
+  constructor() {
+    // sRGB 8-bit storage keeps the very dark gradients free of banding at a quarter of a float cube's memory
+    this.target = new THREE.WebGLCubeRenderTarget(FACE_SIZE, { colorSpace: THREE.SRGBColorSpace, generateMipmaps: false });
+    this.cubeCamera = new THREE.CubeCamera(0.1, 10, this.target);
+    const uniforms: Record<string, THREE.IUniform> = { uTime: { value: 0 } };
+    for (const [k, v] of Object.entries(SKY_VALUES)) {
+      uniforms[k] = { value: Array.isArray(v) ? new THREE.Vector3(v[0], v[1], v[2]) : v };
+    }
+    this.material = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      depthTest: false,
+      depthWrite: false,
+      uniforms,
+      vertexShader: /* glsl */ `
+        varying vec3 vDir;
+        void main() {
+          vDir = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        ${SKY_GLSL}
+        varying vec3 vDir;
+        void main() {
+          // three.js is right-handed, Unity left-handed: the same direction has z negated
+          vec3 d = vec3(vDir.x, vDir.y, -vDir.z);
+          gl_FragColor = vec4(hyperSeaColor(d), 1.0);
+          #include <colorspace_fragment>
+        }`,
+    });
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 16), this.material);
+    this.bakeScene.add(sphere);
+  }
+
+  get texture(): THREE.CubeTexture {
+    return this.target.texture;
+  }
+
+  /** Bake all six faces now (at load). */
+  bakeAll(renderer: THREE.WebGLRenderer, t: number): void {
+    this.material.uniforms.uTime.value = t;
+    this.cubeCamera.update(renderer, this.bakeScene);
+    this.lastBake = t;
+  }
+
+  /** Re-bake one face when its turn comes. */
+  update(renderer: THREE.WebGLRenderer, t: number): void {
+    if (t - this.lastBake < REFRESH_S) return;
+    this.lastBake = t;
+    this.material.uniforms.uTime.value = t;
+    const cam = this.cubeCamera.children[this.face] as THREE.PerspectiveCamera;
+    this.cubeCamera.updateMatrixWorld();
+    const prevTarget = renderer.getRenderTarget();
+    const prevXr = renderer.xr.enabled;
+    renderer.xr.enabled = false;
+    renderer.setRenderTarget(this.target, this.face);
+    renderer.render(this.bakeScene, cam);
+    renderer.setRenderTarget(prevTarget);
+    renderer.xr.enabled = prevXr;
+    this.face = (this.face + 1) % 6;
+  }
 }

@@ -1,5 +1,7 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Rng } from './rng';
+import { loadBytes } from './content';
 
 /**
  * The Home screen's one Omni crystal.
@@ -13,33 +15,142 @@ import type { Rng } from './rng';
 export const CRYSTAL_SPAWN_RADIUS = 392;
 export const CRYSTAL_HIT_RADIUS = 12;
 
+/** OmniCrystalBody.mat on OmniCrystalFresnelShader (gamma colours, converted to linear as Unity does). */
+const lin = (r: number, g: number, b: number) => new THREE.Color(r, g, b).convertSRGBToLinear();
+const OMNI = {
+  bright: lin(0.4862745, 0.9882354, 0),
+  dark: lin(0.0055484856, 0.006289184, 0.0044103395),
+  // _ElementShades 1: each plate wears its element's shade of lime (CrystalElementPlates)
+  charge: lin(0.18, 0.3232, 0),
+  mass: lin(0.3083, 0.5298, 0),
+  space: lin(0.4466, 0.7524, 0),
+  time: lin(0.5929, 0.9882, 0),
+  spread: 0.01,
+};
+
+/**
+ * Load the Omni crystal body (OmniCrystalExport1_8-21-25.fbx under Crystal.prefab, scale 10) and shade it the
+ * way OmniCrystalFresnelShader does at rest:
+ *   colour = lerp(elementBright, _DarkColor, (1 + V·N) / 2)
+ * so the faces turned to the camera are near-black and the silhouette glows lime. Each of the 122 plates gets
+ * its element by its corner count, as CrystalElementPlates classifies them: 10 corners Charge, 6 Mass, 8 at one
+ * distance from the centre Space, 8 at two distances (a rhombus) Time. The charge arcs and depth prisms
+ * (OmniChargeArcs, OmniCrystalTriangles) are not ported yet.
+ */
+async function loadCrystalBody(): Promise<THREE.Mesh> {
+  const gltf = await new GLTFLoader().parseAsync(await loadBytes('crystal.glb'), '');
+  let mesh: THREE.Mesh | null = null;
+  gltf.scene.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh && !mesh) mesh = o as THREE.Mesh;
+  });
+  if (!mesh) throw new Error('crystal.glb has no mesh');
+  const m = mesh as THREE.Mesh;
+  m.updateWorldMatrix(true, false);
+  const geo = m.geometry.clone().applyMatrix4(m.matrixWorld);
+  geo.setAttribute('aBright', new THREE.BufferAttribute(plateColours(geo), 3));
+  const material = new THREE.ShaderMaterial({
+    uniforms: { uDark: { value: OMNI.dark }, uSpread: { value: OMNI.spread } },
+    vertexShader: /* glsl */ `
+      attribute vec3 aBright;
+      uniform float uSpread;
+      varying vec3 vBright;
+      varying vec3 vNormalW;
+      varying vec3 vPosW;
+      void main() {
+        vBright = aBright;
+        // SpreadFresnelDisplace: push along the normal by _Spread in world units
+        vec3 sc = vec3(length(modelMatrix[0].xyz), length(modelMatrix[1].xyz), length(modelMatrix[2].xyz));
+        vec3 p = position + normalize(normal) * (uSpread / sc);
+        vec4 w = modelMatrix * vec4(p, 1.0);
+        vPosW = w.xyz;
+        vNormalW = normalize(mat3(modelMatrix) * normal);
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uDark;
+      varying vec3 vBright;
+      varying vec3 vNormalW;
+      varying vec3 vPosW;
+      void main() {
+        vec3 v = normalize(cameraPosition - vPosW);
+        float f = (1.0 + dot(v, vNormalW)) / 2.0;
+        gl_FragColor = vec4(mix(vBright, uDark, f), 1.0);
+        #include <colorspace_fragment>
+      }`,
+  });
+  return new THREE.Mesh(geo, material);
+}
+
+/** The bright colour of every vertex, by the element of the plate it belongs to. */
+function plateColours(geo: THREE.BufferGeometry): Float32Array {
+  const pos = geo.attributes.position;
+  const n = pos.count;
+  // weld by position, then union the corners of every triangle into plates
+  const key = (i: number) => `${pos.getX(i).toFixed(4)},${pos.getY(i).toFixed(4)},${pos.getZ(i).toFixed(4)}`;
+  const weld = new Map<string, number>();
+  const corner = new Int32Array(n);
+  for (let i = 0; i < n; i++) {
+    const k = key(i);
+    let c = weld.get(k);
+    if (c === undefined) {
+      c = weld.size;
+      weld.set(k, c);
+    }
+    corner[i] = c;
+  }
+  const parent = Array.from({ length: weld.size }, (_, i) => i);
+  const find = (x: number): number => (parent[x] === x ? x : (parent[x] = find(parent[x])));
+  const index = geo.index;
+  const tri = (t: number) => (index ? index.getX(t) : t);
+  const triCount = index ? index.count : n;
+  for (let t = 0; t < triCount; t += 3) {
+    const a = find(corner[tri(t)]);
+    parent[find(corner[tri(t + 1)])] = a;
+    parent[find(corner[tri(t + 2)])] = a;
+  }
+  const plates = new Map<number, Set<number>>();
+  const firstVertex = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    const p = find(corner[i]);
+    if (!plates.has(p)) plates.set(p, new Set());
+    plates.get(p)!.add(corner[i]);
+    if (!firstVertex.has(corner[i])) firstVertex.set(corner[i], i);
+  }
+  const colourOf = new Map<number, THREE.Color>();
+  for (const [p, corners] of plates) {
+    let c = OMNI.bright;
+    if (corners.size === 10) c = OMNI.charge;
+    else if (corners.size === 6) c = OMNI.mass;
+    else if (corners.size === 8) {
+      const pts = [...corners].map((k) => new THREE.Vector3().fromBufferAttribute(pos, firstVertex.get(k)!));
+      const centre = pts.reduce((s, q) => s.add(q), new THREE.Vector3()).multiplyScalar(1 / pts.length);
+      const d = pts.map((q) => q.distanceTo(centre));
+      const spread = (Math.max(...d) - Math.min(...d)) / Math.max(...d);
+      c = spread > 0.02 ? OMNI.time : OMNI.space;
+    }
+    colourOf.set(p, c);
+  }
+  const out = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) colourOf.get(find(corner[i]))!.toArray(out, i * 3);
+  return out;
+}
+
 export class Crystal {
   readonly object = new THREE.Group();
-  private readonly body: THREE.Mesh;
-  private readonly glow: THREE.Sprite;
+  private readonly body = new THREE.Group();
   private pop = 1; // 0..1, the grow-in after a relocation
 
   constructor(private readonly rng: Rng) {
-    // A stand-in for OmniCrystalBody: a tall faceted gem with a soft halo. M2 matches the game's look.
-    const geo = new THREE.OctahedronGeometry(1, 0);
-    geo.scale(5.5, 9, 5.5);
-    this.body = new THREE.Mesh(
-      geo,
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(1.3, 1.45, 1.6) }),
-    );
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(geo),
-      new THREE.LineBasicMaterial({ color: new THREE.Color(2.2, 2.4, 2.6) }),
-    );
-    this.body.add(edges);
-    this.glow = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: haloTexture(), color: 0x9fe8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
-    );
-    this.glow.scale.setScalar(70);
-    this.object.add(this.body, this.glow);
+    this.object.add(this.body);
+    this.body.scale.setScalar(10); // Crystal.prefab
     this.object.name = 'Crystal';
     this.relocate();
     this.pop = 1;
+  }
+
+  /** Load the body mesh; until then the crystal is an empty marker the pilot still chases. */
+  async load(): Promise<void> {
+    this.body.add(await loadCrystalBody());
   }
 
   get position(): THREE.Vector3 {
@@ -64,30 +175,9 @@ export class Crystal {
   }
 
   update(dt: number, t: number): void {
-    this.body.rotation.y = t * 0.6;
-    this.body.rotation.z = Math.sin(t * 0.4) * 0.25;
+    this.body.rotation.y = t * 0.3;
     this.pop = Math.min(1, this.pop + dt / 0.6);
     const k = 1 - Math.pow(1 - this.pop, 3);
-    this.body.scale.setScalar(Math.max(0.001, k));
-    this.glow.scale.setScalar(70 * k * (1 + 0.06 * Math.sin(t * 2.3)));
+    this.body.scale.setScalar(10 * Math.max(0.001, k));
   }
-}
-
-function haloTexture(): THREE.Texture {
-  const size = 64;
-  const data = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const dx = (x + 0.5) / size - 0.5;
-      const dy = (y + 0.5) / size - 0.5;
-      const d = Math.sqrt(dx * dx + dy * dy) * 2;
-      const v = Math.max(0, 1 - d);
-      const i = (y * size + x) * 4;
-      data[i] = data[i + 1] = data[i + 2] = 255;
-      data[i + 3] = Math.round(255 * v * v * v);
-    }
-  }
-  const tex = new THREE.DataTexture(data, size, size);
-  tex.needsUpdate = true;
-  return tex;
 }
