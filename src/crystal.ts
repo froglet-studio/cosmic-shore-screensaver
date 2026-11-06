@@ -48,7 +48,10 @@ async function loadCrystalBody(): Promise<THREE.Mesh> {
   m.updateWorldMatrix(true, false);
   const geo = m.geometry.clone().applyMatrix4(m.matrixWorld);
   geo.setAttribute('aBright', new THREE.BufferAttribute(plateColours(geo), 3));
+  // Cull Off, as the game's pass: through the gaps between plates you see the far plates' inner faces, which
+  // turn away from the camera and so wear the bright lime, the look the Home screen's crystal has.
   const material = new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
     uniforms: { uDark: { value: OMNI.dark }, uSpread: { value: OMNI.spread } },
     vertexShader: /* glsl */ `
       attribute vec3 aBright;

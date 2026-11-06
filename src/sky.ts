@@ -10,7 +10,7 @@ import { SKY_GLSL, SKY_VALUES } from './sky_shader';
  * One face is re-baked per REFRESH_S seconds, so the slow drift still shows while the per-frame cost is one
  * texture lookup.
  */
-const FACE_SIZE = 1024;
+const FACE_SIZE = 768;
 const REFRESH_S = 1.0;
 
 export class Sky {
@@ -22,8 +22,15 @@ export class Sky {
   private lastBake = -Infinity;
 
   constructor() {
-    // sRGB 8-bit storage keeps the very dark gradients free of banding at a quarter of a float cube's memory
-    this.target = new THREE.WebGLCubeRenderTarget(FACE_SIZE, { colorSpace: THREE.SRGBColorSpace, generateMipmaps: false });
+    // Half-float, linear: the galactic band and core are HDR (well above 1), and the game's bloom feeds on that
+    // excess, so an 8-bit target would clip the bright band to a faint glow. 768² x 6 x 8 bytes is about 28 MB.
+    this.target = new THREE.WebGLCubeRenderTarget(FACE_SIZE, {
+      type: THREE.HalfFloatType,
+      colorSpace: THREE.LinearSRGBColorSpace,
+      generateMipmaps: false,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+    });
     this.cubeCamera = new THREE.CubeCamera(0.1, 10, this.target);
     const uniforms: Record<string, THREE.IUniform> = { uTime: { value: 0 } };
     for (const [k, v] of Object.entries(SKY_VALUES)) {

@@ -101,7 +101,13 @@ function lookTowards(target: THREE.Vector3, sharpness: number, dt: number) {
   else camera.quaternion.slerp(lookQ, 1 - Math.exp(-sharpness * dt));
 }
 function poseCamera(t: number, dt: number) {
-  if (params.has('crystalcam')) {
+  const look = params.get('look');
+  if (look) {
+    // debug: from the cell centre, look along a direction given in Unity's frame (x,y,z), e.g. the sky's core
+    const [x, y, z] = look.split(',').map(Number);
+    camera.position.set(0, 0, 0);
+    lookTowards(tmp.set(x, y, -z), 0, dt);
+  } else if (params.has('crystalcam')) {
     // debug: a close orbit of the crystal
     const a = THREE.MathUtils.degToRad(10 * t);
     camera.position.set(crystal.position.x + Math.cos(a) * 30, crystal.position.y + 8, crystal.position.z + Math.sin(a) * 30);
