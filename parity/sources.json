@@ -159,7 +159,7 @@
         "public/content/crystal.glb"
       ],
       "sync": "Mesh: tools/export/export_vessel.py --name crystal --fbx Assets/_Models/OmniCrystalExport1_8-21-25.fbx --no-anim. Shader and colours: hand port into src/crystal.ts.",
-      "synced_at": "8b93a0b104ffaa2ccef7cfe4fbe91c5f74671a2b"
+      "synced_at": "6b5991d44c5fa06e44eca9a5a4bc6a7fcd812c2c"
     },
     {
       "id": "crystal-fx",
@@ -188,7 +188,7 @@
         "src/crystal.ts"
       ],
       "sync": "Run tools/export/export_crystal_fx.py (the auto check runs its --check). A change to a .cs or .shader file is a hand port into src/crystal_fx.ts.",
-      "synced_at": "8b93a0b104ffaa2ccef7cfe4fbe91c5f74671a2b"
+      "synced_at": "6b5991d44c5fa06e44eca9a5a4bc6a7fcd812c2c"
     },
     {
       "id": "squirrel",
