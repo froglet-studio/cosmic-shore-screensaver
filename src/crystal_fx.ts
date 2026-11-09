@@ -638,6 +638,24 @@ export class ChargeArcs {
     this.geo.dispose(); // three keeps a GPU buffer per attribute; a bigger array needs new ones
   }
 
+  /** The sites' radius (body space): the size the sleep rule measures on screen. */
+  get radius(): number {
+    return this.sites.radius;
+  }
+
+  /** Go dark (CrystalChargeArcs.Sleep): no bolt, no lit face. The clock keeps running. */
+  sleep(dt: number): void {
+    this.clock += dt;
+    this.nv = 0;
+    this.ni = 0;
+    this.geo.setDrawRange(0, 0);
+  }
+
+  /** Asleep: keep only the clock, as a crystal too small to see does. */
+  tick(dt: number): void {
+    this.clock += dt;
+  }
+
   /** Debug: how many triangles the light drew this frame. */
   get triangles(): number {
     return this.ni / 3;

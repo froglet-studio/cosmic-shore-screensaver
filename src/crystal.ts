@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { Rng } from './rng';
 import { loadBytes } from './content';
 import { ChargeArcs, DepthPrisms, plateIndex } from './crystal_fx';
+import { ARCS } from './crystal_fx_data';
 
 /**
  * The Home screen's one Omni crystal.
@@ -15,6 +16,8 @@ import { ChargeArcs, DepthPrisms, plateIndex } from './crystal_fx';
  */
 export const CRYSTAL_SPAWN_RADIUS = 392;
 export const CRYSTAL_HIT_RADIUS = 12;
+/** The body's radius (0.735 in body units) times the columns' reach 3, plus a raised prism's own size: what the crystal can reach, body units. */
+const CRYSTAL_BOUND_RADIUS = 3.6;
 
 /** OmniCrystalBody.mat on OmniCrystalFresnelShader (gamma colours, converted to linear as Unity does). */
 const lin = (r: number, g: number, b: number) => new THREE.Color(r, g, b).convertSRGBToLinear();
@@ -160,17 +163,25 @@ function plateColours(geo: THREE.BufferGeometry): Float32Array {
 export class Crystal {
   readonly object = new THREE.Group();
   private readonly body = new THREE.Group();
-  private pop = 1; // 0..1, the grow-in after a relocation
   private prisms: DepthPrisms | null = null;
   arcs: ChargeArcs | null = null;
   private readonly eye = new THREE.Vector3();
+  private readonly frustum = new THREE.Frustum();
+  private readonly viewProj = new THREE.Matrix4();
+  private readonly sphere = new THREE.Sphere();
+  private clock = 0;
+  private lastStep = 0;
+  private asleep = false;
 
   constructor(private readonly rng: Rng) {
     this.object.add(this.body);
     this.body.scale.setScalar(10); // Crystal.prefab
     this.object.name = 'Crystal';
     this.relocate();
-    this.pop = 1;
+    // The crystal holds still and keeps ONE pose for life (CrystalDepthPrisms.ApplyPose runs on enable only, seeded
+    // from the first spawn; a respawn only moves the crystal, CrystalManager.UpdateCrystalPos -> MoveToNewPos).
+    const q = new THREE.Quaternion(this.rng.range(-1, 1), this.rng.range(-1, 1), this.rng.range(-1, 1), this.rng.range(-1, 1));
+    this.body.quaternion.copy(q.lengthSq() > 1e-6 ? q.normalize() : new THREE.Quaternion());
   }
 
   /** Load the body mesh, its depth prisms and its charge arcs; until then the crystal is an empty marker. */
@@ -188,7 +199,11 @@ export class Crystal {
     return this.object.position;
   }
 
-  /** Move to a new random spot in the nucleus ball, at least 5 units from the old one, in a new random pose. */
+  /**
+   * Move to a new random spot in the nucleus ball, at least 5 units from the old one. Only a move, as the game's
+   * respawn is: same pose, and the Mass columns keep their places and go on ratcheting from there (no reseat; the
+   * body's FadeIn bloom is not read by the omni's shaders, so nothing else shows).
+   */
   relocate(): void {
     const last = this.object.position.clone();
     const p = new THREE.Vector3();
@@ -202,24 +217,50 @@ export class Crystal {
       if (p.distanceToSquared(last) > 25) break;
     }
     this.object.position.copy(p);
-    // The crystal holds still; each one gets its own pose (CrystalDepthPrisms orientationJitter 1)
-    const q = new THREE.Quaternion(this.rng.range(-1, 1), this.rng.range(-1, 1), this.rng.range(-1, 1), this.rng.range(-1, 1));
-    this.body.quaternion.copy(q.lengthSq() > 1e-6 ? q.normalize() : new THREE.Quaternion());
-    this.prisms?.reset();
-    this.pop = 0;
   }
 
-  /** Step the grow-in, the depth prisms and the charge arcs against a camera at `cameraWorld`. */
-  update(dt: number, cameraWorld: THREE.Vector3): void {
-    this.pop = Math.min(1, this.pop + dt / 0.6);
-    const k = 1 - Math.pow(1 - this.pop, 3);
-    this.body.scale.setScalar(10 * Math.max(0.001, k));
+  /**
+   * Step the Mass columns and the Charge light against the view camera, as the game does each LateUpdate:
+   *  - a crystal outside the view does no work (CrystalDepthPrisms and CrystalChargeArcs skip when not visible);
+   *  - the arcs sleep, dark, while the crystal's radius on screen is under 32 px (1.25x that to wake)
+   *    (CrystalChargeArcs.TooSmallToSee), so a far crystal shows no white flecks.
+   * `pixelHeight` is the drawing buffer's height, as Unity's Camera.pixelHeight.
+   */
+  update(dt: number, camera: THREE.PerspectiveCamera, pixelHeight: number): void {
     this.object.updateMatrixWorld(true);
-    if (this.prisms) this.prisms.update(this.prisms.object.worldToLocal(this.eye.copy(cameraWorld)), dt);
-    if (this.arcs) {
-      this.arcs.update(dt, this.body.worldToLocal(this.eye.copy(cameraWorld)), this.prisms, this.prisms?.object.matrix ?? null);
-      // the arcs' strikes light the raised prisms: push them into the prisms' state for this frame
-      this.prisms?.syncStrike();
+    this.clock += dt;
+    if (!this.inView(camera)) return;
+    const cameraWorld = camera.position;
+    const elapsed = this.clock - this.lastStep;
+    this.lastStep = this.clock;
+    if (this.prisms) this.prisms.update(this.prisms.object.worldToLocal(this.eye.copy(cameraWorld)), elapsed);
+    if (!this.arcs) return;
+    const radius = this.arcs.radius * this.body.scale.x;
+    const halfHeight = Math.max(1e-3, cameraWorld.distanceTo(this.object.position)) * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const pixels = (radius / halfHeight) * pixelHeight * 0.5;
+    const limit = ARCS.sleepBelowScreenRadiusPixels * (this.asleep ? 1.25 : 1);
+    if (ARCS.sleepBelowScreenRadiusPixels > 0 && pixels < limit) {
+      if (!this.asleep) {
+        this.asleep = true;
+        this.arcs.sleep(elapsed);
+        this.prisms?.strike.fill(0);
+        this.prisms?.syncStrike();
+      } else this.arcs.tick(elapsed);
+      return;
     }
+    this.asleep = false;
+    this.arcs.update(elapsed, this.body.worldToLocal(this.eye.copy(cameraWorld)), this.prisms, this.prisms?.object.matrix ?? null);
+    // the arcs' strikes light the raised prisms: push them into the prisms' state for this frame
+    this.prisms?.syncStrike();
+  }
+
+  /** The crystal's bounds (body and its raised columns, out to the column reach) against the view frustum. */
+  private inView(camera: THREE.PerspectiveCamera): boolean {
+    camera.updateMatrixWorld();
+    this.viewProj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this.frustum.setFromProjectionMatrix(this.viewProj);
+    this.sphere.center.copy(this.object.position);
+    this.sphere.radius = CRYSTAL_BOUND_RADIUS * this.body.scale.x;
+    return this.frustum.intersectsSphere(this.sphere);
   }
 }

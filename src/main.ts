@@ -75,7 +75,7 @@ const rng = new Rng(SEED);
 const crystal = new Crystal(rng);
 await crystal.load();
 scene.add(crystal.object);
-if (params.has('debug')) (window as unknown as { __crystal: Crystal }).__crystal = crystal;
+if (params.has('debug')) Object.assign(window, { __crystal: crystal, __camera: camera });
 
 // The exported GLB already has its nose on +z (the Squirrel dossier: nose +1.89, tail tip -4.56),
 // the same as the pilot's frame, so the model needs no turn.
@@ -180,6 +180,7 @@ const clock = new THREE.Clock();
 let last = -1;
 let frames = 0;
 let crystalMs = 0;
+const drawSize = new THREE.Vector2();
 let fpsT = 0;
 const minDt = 1 / FPS_CAP;
 renderer.setAnimationLoop(() => {
@@ -196,7 +197,7 @@ renderer.setAnimationLoop(() => {
   trail.update(t, pilot.position, pilot.object.quaternion);
   poseCamera(t, step);
   const c0 = performance.now();
-  crystal.update(step, camera.position);
+  crystal.update(step, camera, renderer.getDrawingBufferSize(drawSize).y);
   crystalMs += performance.now() - c0;
   renderer.info.reset();
   sky.update(renderer, t);
