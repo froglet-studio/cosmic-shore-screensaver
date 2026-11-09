@@ -208,7 +208,7 @@ INT_PTR CALLBACK SettingsProc(HWND dlg, UINT msg, WPARAM wp, LPARAM) {
       SendMessageW(view, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Close-up on the vessel"));
       SendMessageW(view, CB_SETCURSEL, st.view == L"vessel" ? 1 : 0, 0);
       const std::wstring about = std::wstring(L"Version ") + SCR_VERSION_W +
-                                 L". Runs offline; nothing is sent anywhere.\nSettings: " + SettingsPath();
+                                 L". Runs offline; nothing is sent anywhere.";
       SetDlgItemTextW(dlg, IDC_VERSION, about.c_str());
       return TRUE;
     }
