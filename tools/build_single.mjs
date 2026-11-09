@@ -7,9 +7,10 @@
 // and no loading text, and a CSP that allows nothing but the page itself.
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const dist = new URL('../dist/', import.meta.url).pathname;
-const content = new URL('../public/content/', import.meta.url).pathname;
+const dist = fileURLToPath(new URL('../dist/', import.meta.url));
+const content = fileURLToPath(new URL('../public/content/', import.meta.url));
 const html = await readFile(join(dist, 'index.html'), 'utf8');
 const src = html.match(/<script type="module" crossorigin src="\.\/(assets\/[^"]+\.js)"><\/script>/);
 if (!src) throw new Error('could not find the bundle script in dist/index.html');
