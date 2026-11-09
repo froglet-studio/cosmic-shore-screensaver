@@ -237,6 +237,8 @@ void Quit(const wchar_t* why) {
   if (g_quitting) return;
   g_quitting = true;
   Log(L"quit: %ls", why);
+  // Hide first, so the desktop is back at once; closing the web views can take a moment longer.
+  for (auto& s : g_screens) ShowWindow(s->hwnd, SW_HIDE);
   for (auto& s : g_screens) {
     if (s->controller) s->controller->Close();
   }
@@ -348,8 +350,7 @@ void ConfigureWebView(Screen& s) {
 
   ICoreWebView2Controller2* c2 = nullptr;
   if (SUCCEEDED(s.controller->QueryInterface(IID_ICoreWebView2Controller2, reinterpret_cast<void**>(&c2))) && c2) {
-    c2->put_DefaultBackgroundColor(COREWEBVIEW2_COLOR{255, GetRValue(kBackground), GetGValue(kBackground),
-                                                      GetBValue(kBackground)});
+    c2->put_DefaultBackgroundColor(COREWEBVIEW2_COLOR{0xFF, 2, 1, 8});  // kBackground
     c2->Release();
   }
 

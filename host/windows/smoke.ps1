@@ -18,6 +18,10 @@ public static class Inject {
   [DllImport("user32.dll")] public static extern void mouse_event(uint flags, int dx, int dy, uint data, UIntPtr extra);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   public static void Key() { keybd_event(0x41, 0, 0, UIntPtr.Zero); keybd_event(0x41, 0, 2, UIntPtr.Zero); }
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string cls, string title);
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
+  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hwnd);
+  public static uint DialogPid(string title) { IntPtr h = FindWindow("#32770", title); if (h == IntPtr.Zero || !IsWindowVisible(h)) return 0; uint pid; GetWindowThreadProcessId(h, out pid); return pid; }
   public static void Click() { mouse_event(0x0002, 0, 0, 0, UIntPtr.Zero); mouse_event(0x0004, 0, 0, 0, UIntPtr.Zero); }
 }
 "@
@@ -67,8 +71,7 @@ $p = Start-Scr @("/c") $log
 Start-Sleep -Seconds 3
 if ($p.HasExited) { Fail "/c exited at once (code $($p.ExitCode))" }
 else {
-  $p.Refresh()
-  if ($p.MainWindowTitle -ne "Cosmic Shore Screensaver") { Fail "/c window title is '$($p.MainWindowTitle)'" }
+  if ([Inject]::DialogPid("Cosmic Shore Screensaver") -ne $p.Id) { Fail "/c: no visible 'Cosmic Shore Screensaver' dialog from the .scr" }
   Shot "settings-dialog"
   $p.Kill(); $p.WaitForExit()
 }
