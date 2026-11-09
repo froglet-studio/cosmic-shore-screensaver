@@ -4,3 +4,6 @@ smoke-out/
 *.log
 __pycache__/
 dist-single/
+build/
+dist-windows/
+smoke-windows/

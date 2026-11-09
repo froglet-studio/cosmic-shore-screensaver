@@ -1,0 +1,49 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish a GitHub Release with the Windows zip.
+# Signing: the "release" environment holds the signing settings once they exist (host/windows/sign.ps1);
+# until then the build is unsigned and the step says so.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build, sign (when configured) and zip
+        shell: pwsh
+        env:
+          SIGNING_ENDPOINT: ${{ vars.SIGNING_ENDPOINT }}
+          SIGNING_ACCOUNT: ${{ vars.SIGNING_ACCOUNT }}
+          SIGNING_PROFILE: ${{ vars.SIGNING_PROFILE }}
+          SIGNING_DLIB: ${{ vars.SIGNING_DLIB }}
+        run: host/windows/build.ps1 -Version ($env:GITHUB_REF_NAME.TrimStart('v'))
+      - name: Smoke test on the Windows desktop
+        shell: pwsh
+        run: host/windows/smoke.ps1 -Scr dist-windows/CosmicShore.scr
+      - name: Publish the GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $zip = Get-ChildItem dist-windows/*.zip | Select-Object -First 1
+          $notes = @"
+          Cosmic Shore Screensaver for Windows 10 and 11.
+
+          Download **$($zip.Name)**, extract it, right-click **CosmicShore.scr** and choose **Install**.
+          This build is not code-signed yet: Windows shows "Windows protected your PC". Click **More info**, then **Run anyway**.
+          It runs offline and sends nothing anywhere. Full steps are in README.txt inside the zip.
+          "@
+          gh release create "$env:GITHUB_REF_NAME" $zip.FullName dist-windows/SHA256SUMS.txt --title "Cosmic Shore Screensaver $env:GITHUB_REF_NAME" --notes $notes --prerelease

@@ -12,19 +12,23 @@ import { Rng } from './rng';
 import { Crystal, CRYSTAL_HIT_RADIUS } from './crystal';
 import { Pilot } from './pilot';
 import { Trail } from './trail';
+import { attachHost, hostReady } from './host';
 
 // ── settings (URL params for now; a settings model arrives in M3) ─────────────────────────
 const params = new URLSearchParams(location.search);
 const FPS_CAP = Number(params.get('fps') ?? 30);
 const DEBUG = params.has('debug');
 const SEED = Number(params.get('seed') ?? 0x5eed) >>> 0;
+// Render scale (0.25-1): the Windows preview thumbnail asks for 0.5.
+const SCALE = Math.min(Math.max(Number(params.get('scale') ?? 1) || 1, 0.25), 1);
+attachHost(params);
 // The ring size of the trail (the plan's D4). Two rails, so this is ~107 s of flight at 36 u/s.
 const TRAIL_CAPACITY = 1500;
 let view: 'lavalamp' | 'vessel' = params.get('view') === 'vessel' ? 'vessel' : 'lavalamp';
 
 // ── renderer ──────────────────────────────────────────────────────────────────────────────
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'low-power' });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5) * SCALE);
 renderer.setSize(innerWidth, innerHeight);
 // The game renders HDR in linear space with no tonemapping (URP_Asset: colour grading LDR, no Tonemapping
 // override in the profile), so values above 1 clip at the output, as they do in the game.
@@ -212,3 +216,4 @@ renderer.setAnimationLoop(() => {
   }
 });
 (window as unknown as { __ready: boolean }).__ready = true;
+hostReady();
