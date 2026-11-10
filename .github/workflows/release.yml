@@ -118,7 +118,7 @@ jobs:
           cat > notes.md <<NOTES
           The Cosmic Shore Home screen as a screensaver. It runs offline and sends nothing anywhere.
 
-          **Windows 10 and 11:** download **${win}**, extract it, copy **CosmicShore.scr** into `C:\Windows\System32` (Windows asks for admin permission), then pick **Cosmic Shore** in Screen Saver Settings.
+          **Windows 10 and 11:** download **${win}**, extract it, copy **CosmicShore.scr** into \`C:\Windows\System32\` (Windows asks for admin permission), then pick **Cosmic Shore** in Screen Saver Settings.
           This build is not code-signed yet: Windows shows "Windows protected your PC". Click **More info**, then **Run anyway**.
 
           **macOS 12 or later (Apple silicon and Intel):** download **${mac}**, open it, double-click **CosmicShore.saver** and install it.
