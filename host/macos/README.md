@@ -43,7 +43,8 @@ The binary is universal (arm64 + x86_64), built by `swiftc` for macOS 12 and lat
 small stand-in host (`smoke/Harness.swift`, never shipped) and checks: the signature verifies; the Options
 sheet builds; full screen and preview each draw the scene (a snapshot that is not black); the page asks
 for nothing outside itself and reports no error; `willstop` ends the full-screen process with exit 0 and
-leaves the preview running. Its pictures are the `macos-smoke` artifact, and `print_shots.sh` writes them
+leaves the preview running. The check uses WebKit's own snapshot because the CI Mac's screen capture never shows a WebGL canvas
+(a bare WKWebView with a red WebGL canvas shows the same on that machine). Its pictures are the `macos-smoke` artifact, and `print_shots.sh` writes them
 into the job log as base64 JPEGs.
 
 What CI cannot test, and needs a real Mac by hand (plan §7.2): installing from a download (Gatekeeper),

@@ -103,24 +103,6 @@ case "run":
   }
   app.run()
 
-case "webgltest":
-  // diagnostic: a bare WKWebView with a red WebGL canvas, to tell whether screencapture sees WebGL here
-  let app = NSApplication.shared
-  app.setActivationPolicy(.regular)
-  let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 400, height: 300), styleMask: [.titled],
-                        backing: .buffered, defer: false)
-  let web = WKWebView(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
-  window.contentView = web
-  web.loadHTMLString("""
-    <body style="margin:0;background:#00ff00"><canvas id=c width=200 height=300></canvas><script>
-    const g=document.getElementById('c').getContext('webgl2');
-    function f(){g.clearColor(1,0,0,1);g.clear(g.COLOR_BUFFER_BIT);requestAnimationFrame(f)}f();
-    </script></body>
-    """, baseURL: nil)
-  window.makeKeyAndOrderFront(nil)
-  app.activate(ignoringOtherApps: true)
-  app.run()
-
 default:
   fail("unknown command \(args[1])")
 }

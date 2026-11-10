@@ -37,6 +37,8 @@ run() {
     sleep 0.25
   done
   cat "$out/$name.out"
+  # the CI Mac's screen capture shows windows but never a WebGL canvas (a bare WKWebView test showed the same),
+  # so the check is WebKit's own snapshot; this capture only shows where the window sits
   screencapture -x "$out/$name-screen.png" 2>/dev/null || echo "(screencapture not available)"
   local lit
   lit="$(sed -n 's/^lit=//p' "$out/$name.out")"
@@ -67,12 +69,6 @@ sleep 2
 if kill -0 "$pid" 2>/dev/null; then echo "preview: still running after willstop (right)"; kill "$pid"; wait "$pid" 2>/dev/null
 else fail "preview: willstop ended the preview process"; fi
 cat "$out/preview.log"
-
-# diagnostic only (never fails): does screencapture on this machine see a WebGL canvas at all?
-"$harness" webgltest & diag=$!
-sleep 5
-screencapture -x "$out/webgltest-screen.png" 2>/dev/null || true
-kill "$diag" 2>/dev/null; wait "$diag" 2>/dev/null
 
 ls -la "$out"
 if (( failures )); then echo "$failures check(s) failed"; exit 1; fi
