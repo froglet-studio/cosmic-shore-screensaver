@@ -51,7 +51,7 @@ jobs:
           $notes = @"
           Cosmic Shore Screensaver for Windows 10 and 11.
 
-          Download **$($zip.Name)**, extract it, right-click **CosmicShore.scr** and choose **Install**.
+          Download **$($zip.Name)**, extract it, copy **CosmicShore.scr** into `C:\Windows\System32` (Windows asks for admin permission), then pick **Cosmic Shore** in Screen Saver Settings.
           This build is not code-signed yet: Windows shows "Windows protected your PC". Click **More info**, then **Run anyway**.
           It runs offline and sends nothing anywhere. Full steps are in README.txt inside the zip.
           "@
