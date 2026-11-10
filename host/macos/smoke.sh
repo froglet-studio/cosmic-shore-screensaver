@@ -68,6 +68,12 @@ if kill -0 "$pid" 2>/dev/null; then echo "preview: still running after willstop 
 else fail "preview: willstop ended the preview process"; fi
 cat "$out/preview.log"
 
+# diagnostic only (never fails): does screencapture on this machine see a WebGL canvas at all?
+"$harness" webgltest & diag=$!
+sleep 5
+screencapture -x "$out/webgltest-screen.png" 2>/dev/null || true
+kill "$diag" 2>/dev/null; wait "$diag" 2>/dev/null
+
 ls -la "$out"
 if (( failures )); then echo "$failures check(s) failed"; exit 1; fi
 echo "all macOS smoke checks passed"
