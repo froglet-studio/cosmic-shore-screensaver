@@ -432,6 +432,11 @@ early. Microsoft is explicit that it "does **not** provide instant SmartScreen t
 with consecutive signed releases under one identity. **Adopt it at M6, before the public launch
 announcement**, so reputation is building while traffic is still low. The CI pipeline has a no-op
 `sign` step from M5 (§8.6), so adding it later means adding secrets, not restructuring.
+*(Update 2026-11-10, M6: re-checked and wired. Still about $9.99/month (Basic, 5,000 signatures). Organisations
+now qualify in the US, Canada, the EU, the UK, Australia, New Zealand, Japan, South Korea, Singapore,
+Switzerland, Norway and Israel; identity validation takes 1 to 20 business days. `release.yml` signs with
+`azure/artifact-signing-action@v2` through a secret-free OIDC sign-in once the `release` environment has its
+variables. Setup steps, the alternatives weighed and what changes for users: `docs/SIGNING.md`.)*
 
 ### 8.2 macOS (`.saver`)
 
