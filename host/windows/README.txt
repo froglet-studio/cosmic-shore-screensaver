@@ -15,9 +15,9 @@ INSTALL
 2. Right-click CosmicShore.scr and choose "Install".
 3. Screen Saver Settings opens with "Cosmic Shore" selected. Set the wait time and click OK.
 
-This early build is not code-signed yet, so Windows warns you the first time:
-  "Windows protected your PC"  ->  click "More info", then "Run anyway".
-Some antivirus programs are also wary of unsigned screensavers. A signed build comes later.
+If Windows warns you the first time with "Windows protected your PC", click "More info", then
+"Run anyway". A signed build names "Froglet Games, Inc." as its publisher there; Windows can still warn
+about a new release until enough people have downloaded it. An unsigned build says "Unknown publisher".
 
 Settings (frame rate, which screens, wide or close-up camera) are under "Settings..." in
 Screen Saver Settings. They are kept in %APPDATA%\Froglet\CosmicShoreScreensaver\settings.json.

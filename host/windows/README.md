@@ -39,6 +39,7 @@ CI (`.github/workflows/ci.yml`, job `windows`) builds the zip and runs `smoke.ps
 every PR; the screenshots are the `windows-smoke` artifact. Pushing a tag `v*` runs `release.yml`, which
 does the same and publishes a GitHub pre-release with the zip and `SHA256SUMS.txt`.
 
-**Signing** (M6) is one step, `sign.ps1`, already in the build. Until the `release` environment has the
-Azure Artifact Signing settings it logs "unsigned build" and passes; adding them is configuration, not a
-code change.
+**Signing** (M6): `release.yml` builds the `.scr` (`build.ps1 -NoPackage`), signs it with Azure Artifact
+Signing, checks the signature and its timestamp, and only then zips it (`package.ps1`), so the zip and
+`SHA256SUMS.txt` hold the signed file. Signing switches on when the `release` environment has the
+variables in `docs/SIGNING.md`; until then the release is unsigned and the run shows a warning saying so.

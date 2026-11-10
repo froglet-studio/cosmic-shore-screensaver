@@ -1,12 +1,15 @@
 # Builds CosmicShore.scr and its download zip on Windows (MSVC). CI runs exactly this.
 #   pwsh host/windows/build.ps1 -Version 0.1.0
+# The release workflow runs it with -NoPackage, signs the .scr (Azure Artifact Signing, when configured),
+# then zips with host/windows/package.ps1, so the zip always holds the signed file.
 # Needs: Node 22 (for the web page), CMake and Visual Studio 2022 Build Tools (C++ workload).
 # Writes:  dist-windows/CosmicShore.scr
 #          dist-windows/CosmicShoreScreensaver-<version>-windows.zip   (CosmicShore.scr + README.txt)
 #          dist-windows/SHA256SUMS.txt
 param(
   [string]$Version = "0.0.0",
-  [switch]$SkipWeb   # reuse dist-single/screensaver-host.html as it is
+  [switch]$SkipWeb,    # reuse dist-single/screensaver-host.html as it is
+  [switch]$NoPackage   # stop after dist-windows/CosmicShore.scr (sign it, then run package.ps1)
 )
 $ErrorActionPreference = "Stop"
 $root = Resolve-Path "$PSScriptRoot/../.."
@@ -40,20 +43,8 @@ try {
   $scr = Join-Path $out "CosmicShore.scr"
   Copy-Item "$build/Release/CosmicShore.scr" $scr -Force
 
-  # 4. Sign (a no-op until signing is set up: host/windows/sign.ps1).
-  & "$PSScriptRoot/sign.ps1" -Path $scr
+  "{0,-48} {1,8:N2} MB" -f (Split-Path $scr -Leaf), ((Get-Item $scr).Length / 1MB)
 
-  # 5. Never a bare .scr: browsers and mail flag them. The zip holds the .scr and the install steps.
-  $zip = Join-Path $out "CosmicShoreScreensaver-$Version-windows.zip"
-  $stage = Join-Path $root "build/zip"
-  Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
-  New-Item -ItemType Directory -Force $stage | Out-Null
-  Copy-Item $scr $stage
-  (Get-Content "$PSScriptRoot/README.txt" -Raw).Replace("{{VERSION}}", $Version) | Set-Content "$stage/README.txt" -Encoding utf8 -NoNewline
-  Remove-Item $zip -Force -ErrorAction SilentlyContinue
-  Compress-Archive -Path "$stage/*" -DestinationPath $zip -CompressionLevel Optimal
-
-  $sums = foreach ($f in @($zip, $scr)) { "{0}  {1}" -f (Get-FileHash $f -Algorithm SHA256).Hash.ToLower(), (Split-Path $f -Leaf) }
-  $sums | Set-Content (Join-Path $out "SHA256SUMS.txt") -Encoding ascii
-  foreach ($f in @($scr, $zip)) { "{0,-48} {1,8:N2} MB" -f (Split-Path $f -Leaf), ((Get-Item $f).Length / 1MB) }
+  # 4. Never a bare .scr: browsers and mail flag them (package.ps1 zips it with the install steps).
+  if (-not $NoPackage) { & "$PSScriptRoot/package.ps1" -Version $Version }
 } finally { Pop-Location }
