@@ -1,12 +1,16 @@
 // Build ONE self-contained HTML file: the bundle's JS inlined and every exported content file
 // embedded as base64. It is the shareable preview page (published as a claude.ai artifact),
 // and the same shape a native host can load with no file server.
-//   npm run build && node tools/build_single.mjs   ->  dist-single/cosmic-shore-screensaver.html
+//   npm run build && node tools/build_single.mjs          ->  dist-single/cosmic-shore-screensaver.html
+//   npm run build && node tools/build_single.mjs --host   ->  dist-single/screensaver-host.html
+// --host is the page the native hosts embed (host/windows): a full document with no preview buttons
+// and no loading text, and a CSP that allows nothing but the page itself.
 import { readFile, readdir, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const dist = new URL('../dist/', import.meta.url).pathname;
-const content = new URL('../public/content/', import.meta.url).pathname;
+const dist = fileURLToPath(new URL('../dist/', import.meta.url));
+const content = fileURLToPath(new URL('../public/content/', import.meta.url));
 const html = await readFile(join(dist, 'index.html'), 'utf8');
 const src = html.match(/<script type="module" crossorigin src="\.\/(assets\/[^"]+\.js)"><\/script>/);
 if (!src) throw new Error('could not find the bundle script in dist/index.html');
@@ -18,7 +22,7 @@ for (const f of await readdir(content)) {
   embed[f] = (await readFile(join(content, f))).toString('base64');
 }
 
-const page = `<title>Cosmic Shore Screensaver</title>
+const preview = `<title>Cosmic Shore Screensaver</title>
 <meta name="description" content="Live preview of the Cosmic Shore screensaver.">
 <style>
   :root { --bg: #020108; --fg: #c9d4ee; --muted: #8fa3c8; --btn: rgba(12, 18, 40, .72); --btn-edge: rgba(120, 150, 220, .35); color-scheme: dark; }
@@ -40,6 +44,28 @@ const page = `<title>Cosmic Shore Screensaver</title>
 <script type="module">${js}
 document.getElementById('loading')?.remove();</script>
 `;
+const host = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src data: blob:; worker-src blob:">
+<title>Cosmic Shore Screensaver</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #020108; overflow: hidden; cursor: none; }
+  canvas { position: fixed; inset: 0; display: block; width: 100%; height: 100%; }
+  #hud { position: fixed; left: 12px; bottom: 10px; font: 12px/1.4 system-ui, sans-serif; color: #8fa3c8; opacity: .6; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="hud"></div>
+<script>window.__CONTENT = ${JSON.stringify(embed)};</script>
+<script type="module">${js}</script>
+</body>
+</html>
+`;
+
+const hostMode = process.argv.includes('--host');
+const [name, page] = hostMode ? ['screensaver-host.html', host] : ['cosmic-shore-screensaver.html', preview];
 await mkdir('dist-single', { recursive: true });
-await writeFile('dist-single/cosmic-shore-screensaver.html', page);
-console.log(`wrote dist-single/cosmic-shore-screensaver.html (${(page.length / 1e6).toFixed(2)} MB)`);
+await writeFile(`dist-single/${name}`, page);
+console.log(`wrote dist-single/${name} (${(page.length / 1e6).toFixed(2)} MB)`);

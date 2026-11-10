@@ -1,0 +1,57 @@
+// Resources of CosmicShore.scr. CMake fills the @...@ values (CMakeLists.txt).
+#include <windows.h>
+#include "resource.h"
+
+1 24 "@SCR_MANIFEST@"
+
+IDR_INDEX RCDATA "@INDEX_HTML@"
+
+STRINGTABLE
+BEGIN
+  IDS_DESCRIPTION "Cosmic Shore"
+END
+
+IDD_SETTINGS DIALOGEX 0, 0, 252, 132
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Cosmic Shore Screensaver"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+  LTEXT "Frame rate", -1, 10, 13, 70, 10
+  COMBOBOX IDC_FPS, 86, 11, 156, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+  LTEXT "Screens", -1, 10, 33, 70, 10
+  COMBOBOX IDC_SCREENS, 86, 31, 156, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+  LTEXT "Camera", -1, 10, 53, 70, 10
+  COMBOBOX IDC_VIEW, 86, 51, 156, 60, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+  LTEXT "", IDC_VERSION, 10, 78, 232, 20
+  DEFPUSHBUTTON "OK", IDOK, 138, 108, 50, 14
+  PUSHBUTTON "Cancel", IDCANCEL, 192, 108, 50, 14
+END
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION @SCR_VERSION_COMMAS@
+PRODUCTVERSION @SCR_VERSION_COMMAS@
+FILEFLAGSMASK 0x3fL
+FILEFLAGS 0x0L
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904b0"
+    BEGIN
+      VALUE "CompanyName", "Froglet Games, Inc."
+      VALUE "FileDescription", "Cosmic Shore Screensaver"
+      VALUE "FileVersion", "@SCR_VERSION@"
+      VALUE "InternalName", "CosmicShore"
+      VALUE "LegalCopyright", "Froglet Games, Inc."
+      VALUE "OriginalFilename", "CosmicShore.scr"
+      VALUE "ProductName", "Cosmic Shore Screensaver"
+      VALUE "ProductVersion", "@SCR_VERSION@"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

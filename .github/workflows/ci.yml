@@ -37,3 +37,34 @@ jobs:
         with:
           name: web-bundle
           path: dist/
+
+  windows:
+    # The .scr host: build it with MSVC, then run it on a real Windows desktop (host/windows/smoke.ps1).
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build CosmicShore.scr and the zip
+        shell: pwsh
+        run: host/windows/build.ps1 -Version 0.0.0
+      - name: Smoke test on the Windows desktop
+        shell: pwsh
+        run: host/windows/smoke.ps1 -Scr dist-windows/CosmicShore.scr
+      - name: Print the screenshots into the log
+        if: always()
+        shell: pwsh
+        run: host/windows/print_shots.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-smoke
+          path: smoke-windows/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: dist-windows/*.zip
