@@ -326,8 +326,8 @@ plus your review.
 | **M4** | **Landing-page live preview**: a `/screensaver` page with the preview, downloads ("coming soon") and FAQ | Merged on the landing page; preview loads in < 2 s on broadband |
 | **M5** | **Windows `.scr`** (WebView2 host): `/s`, `/c`, `/p <HWND>`, multi-monitor, exit on input, settings, single-file `.scr` with embedded assets, zipped | Passes §7.2 on Windows 10 and 11; an **unsigned** release on GitHub Releases, linked from `/screensaver` with SmartScreen instructions |
 | **M6** | Windows signing (Azure Artifact Signing) in CI | A signed release; SmartScreen reputation starts building (§8.1) |
-| **M7a** | macOS `.saver` dev build (WKWebView host, ad-hoc signed) | Runs on Sonoma, Sequoia and Tahoe test Macs via the quarantine workaround (§8.2) |
-| **M7b** | macOS public: Developer ID signing + notarization, **gated on Apple enrollment** | A notarized `.saver` in a `.zip` on Releases + landing page |
+| **M7a** | macOS `.saver` dev build (WKWebView host, ad-hoc signed). *Built 2026-11-10: `host/macos/`, CI job `macos`, released beside the Windows zip.* | Runs on Sonoma, Sequoia and Tahoe test Macs via the quarantine workaround (§8.2) |
+| **M7b** | macOS public: Developer ID signing + notarization, **gated on Apple enrollment**. *Wired 2026-11-10: switches on when the secrets in `host/macos/SIGNING.md` are added.* | A notarized `.saver` in a `.zip` on Releases + landing page |
 | **M8** | Linux/browser: a fullscreen URL (`/screensaver/play`) and an optional xscreensaver recipe; the in-game screensaver mode is separate (§8.5) | Docs page |
 
 The ordering puts the web bundle first because every later milestone ships that same bundle. The preview
