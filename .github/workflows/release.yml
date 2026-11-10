@@ -1,14 +1,23 @@
 name: Release
 
-# Push a tag like v0.1.0 to publish a GitHub Release with the Windows zip.
+# Publish a GitHub Release with the Windows zip: push a tag like v0.1.0, or run this workflow by hand
+# (Actions > Release > Run workflow) with a version; then the release creates the tag on this commit.
 # Signing: the "release" environment holds the signing settings once they exist (host/windows/sign.ps1);
 # until then the build is unsigned and the step says so.
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish, e.g. 0.1.0 (tagged v0.1.0)'
+        required: true
 
 permissions:
   contents: write
+
+env:
+  TAG: ${{ github.event_name == 'workflow_dispatch' && format('v{0}', inputs.version) || github.ref_name }}
 
 jobs:
   windows:
@@ -29,7 +38,7 @@ jobs:
           SIGNING_ACCOUNT: ${{ vars.SIGNING_ACCOUNT }}
           SIGNING_PROFILE: ${{ vars.SIGNING_PROFILE }}
           SIGNING_DLIB: ${{ vars.SIGNING_DLIB }}
-        run: host/windows/build.ps1 -Version ($env:GITHUB_REF_NAME.TrimStart('v'))
+        run: host/windows/build.ps1 -Version ($env:TAG.TrimStart('v'))
       - name: Smoke test on the Windows desktop
         shell: pwsh
         run: host/windows/smoke.ps1 -Scr dist-windows/CosmicShore.scr
@@ -46,4 +55,4 @@ jobs:
           This build is not code-signed yet: Windows shows "Windows protected your PC". Click **More info**, then **Run anyway**.
           It runs offline and sends nothing anywhere. Full steps are in README.txt inside the zip.
           "@
-          gh release create "$env:GITHUB_REF_NAME" $zip.FullName dist-windows/SHA256SUMS.txt --title "Cosmic Shore Screensaver $env:GITHUB_REF_NAME" --notes $notes --prerelease
+          gh release create "$env:TAG" $zip.FullName dist-windows/SHA256SUMS.txt --target "$env:GITHUB_SHA" --title "Cosmic Shore Screensaver $env:TAG" --notes $notes --prerelease
