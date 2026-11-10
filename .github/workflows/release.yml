@@ -1,9 +1,12 @@
 name: Release
 
-# Publish a GitHub Release with the Windows zip: push a tag like v0.1.0, or run this workflow by hand
-# (Actions > Release > Run workflow) with a version; then the release creates the tag on this commit.
-# Signing: the "release" environment holds the signing settings once they exist (host/windows/sign.ps1);
-# until then the build is unsigned and the step says so.
+# Publish a GitHub Release with the Windows and macOS zips: push a tag like v0.1.0, or run this workflow by
+# hand (Actions > Release > Run workflow) with a version; then the release creates the tag on this commit.
+# Signing: the protected "release" environment holds the signing settings once they exist.
+# - Windows: host/windows/sign.ps1 (Azure Artifact Signing variables); until then unsigned.
+# - macOS:   host/macos/sign.sh (Developer ID certificate + notary key secrets, host/macos/SIGNING.md);
+#            until then ad-hoc signed and not notarized.
+# Each step says which it did, and the release notes follow.
 on:
   push:
     tags: ['v*']
@@ -42,17 +45,86 @@ jobs:
       - name: Smoke test on the Windows desktop
         shell: pwsh
         run: host/windows/smoke.ps1 -Scr dist-windows/CosmicShore.scr
-      - name: Publish the GitHub Release
+      - name: Name the checksums file for its platform
         shell: pwsh
+        run: Move-Item dist-windows/SHA256SUMS.txt dist-windows/SHA256SUMS-windows.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            dist-windows/*.zip
+            dist-windows/SHA256SUMS-windows.txt
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build, sign and notarize (when configured) and zip
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: host/macos/build.sh "${TAG#v}"
+      - name: Smoke test on the macOS desktop
+        run: host/macos/smoke.sh dist-macos/CosmicShore.saver
+      - name: Name the checksums and signing files for their platform
+        run: |
+          mv dist-macos/SHA256SUMS.txt dist-macos/SHA256SUMS-macos.txt
+          mv dist-macos/SIGNING dist-macos/SIGNING-macos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: |
+            dist-macos/*.zip
+            dist-macos/SHA256SUMS-macos.txt
+            dist-macos/SIGNING-macos
+
+  publish:
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          $zip = Get-ChildItem dist-windows/*.zip | Select-Object -First 1
-          $notes = @"
-          Cosmic Shore Screensaver for Windows 10 and 11.
+          set -euo pipefail
+          ls -la release
+          win="$(cd release && ls *-windows.zip)"
+          mac="$(cd release && ls *-macos.zip)"
+          cat release/SHA256SUMS-windows.txt release/SHA256SUMS-macos.txt > release/SHA256SUMS.txt
+          if [[ "$(cat release/SIGNING-macos)" == notarized ]]; then
+            mac_note="Signed by Froglet Games and notarized by Apple: it installs with no warning."
+          else
+            mac_note='This build is not notarized yet, so macOS blocks it the first time: click **Done**, then open **System Settings > Privacy & Security** and click **Open Anyway** next to CosmicShore.saver.'
+          fi
+          cat > notes.md <<NOTES
+          The Cosmic Shore Home screen as a screensaver. It runs offline and sends nothing anywhere.
 
-          Download **$($zip.Name)**, extract it, right-click **CosmicShore.scr** and choose **Install**.
+          **Windows 10 and 11:** download **${win}**, extract it, right-click **CosmicShore.scr** and choose **Install**.
           This build is not code-signed yet: Windows shows "Windows protected your PC". Click **More info**, then **Run anyway**.
-          It runs offline and sends nothing anywhere. Full steps are in README.txt inside the zip.
-          "@
-          gh release create "$env:TAG" $zip.FullName dist-windows/SHA256SUMS.txt --target "$env:GITHUB_SHA" --title "Cosmic Shore Screensaver $env:TAG" --notes $notes --prerelease
+
+          **macOS 12 or later (Apple silicon and Intel):** download **${mac}**, open it, double-click **CosmicShore.saver** and install it.
+          ${mac_note}
+
+          Full steps are in README.txt inside each zip.
+          NOTES
+          gh release create "$TAG" "release/$win" "release/$mac" release/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" --title "Cosmic Shore Screensaver $TAG" --notes-file notes.md --prerelease

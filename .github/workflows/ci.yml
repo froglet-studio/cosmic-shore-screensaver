@@ -68,3 +68,32 @@ jobs:
         with:
           name: windows-zip
           path: dist-windows/*.zip
+
+  macos:
+    # The .saver host: build it universal and ad-hoc signed, then load it on a real Mac desktop
+    # (host/macos/smoke.sh). Pull requests never see the signing secrets.
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build CosmicShore.saver and the zip
+        run: host/macos/build.sh 0.0.0
+      - name: Smoke test on the macOS desktop
+        run: host/macos/smoke.sh dist-macos/CosmicShore.saver
+      - name: Print the pictures into the log
+        if: always()
+        run: host/macos/print_shots.sh smoke-macos
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: macos-smoke
+          path: smoke-macos/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-zip
+          path: dist-macos/*.zip
