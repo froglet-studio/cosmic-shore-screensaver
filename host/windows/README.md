@@ -39,6 +39,10 @@ CI (`.github/workflows/ci.yml`, job `windows`) builds the zip and runs `smoke.ps
 every PR; the screenshots are the `windows-smoke` artifact. Pushing a tag `v*` runs `release.yml`, which
 does the same and publishes a GitHub pre-release with the zip and `SHA256SUMS.txt`.
 
+**Install** for users is a copy into `C:\Windows\System32` (README.txt): Screen Saver Settings lists only
+the `.scr` files there, and right-click > Install from elsewhere does not persist. An installer that does
+the copy is planned with M6.
+
 **Signing** (M6) is one step, `sign.ps1`, already in the build. Until the `release` environment has the
 Azure Artifact Signing settings it logs "unsigned build" and passes; adding them is configuration, not a
 code change.

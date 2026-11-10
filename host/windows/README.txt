@@ -10,10 +10,12 @@ and nearly every Windows 10 PC. If it is missing, the screensaver offers Microso
 
 INSTALL
 -------
-1. Extract this zip (right-click it > Extract All...). Keep CosmicShore.scr somewhere it will stay,
-   for example your Documents folder.
-2. Right-click CosmicShore.scr and choose "Install".
-3. Screen Saver Settings opens with "Cosmic Shore" selected. Set the wait time and click OK.
+1. Extract this zip (right-click it > Extract All...).
+2. Copy CosmicShore.scr into C:\Windows\System32. Windows asks for administrator permission;
+   click Continue. (Screen Saver Settings only lists screensavers kept in that folder. Right-click >
+   "Install" from anywhere else selects it once, but it drops out of the list when you pick another.)
+3. Open Screen Saver Settings (Start > type "screen saver"), choose "Cosmic Shore", set the wait
+   time and click OK.
 
 This early build is not code-signed yet, so Windows warns you the first time:
   "Windows protected your PC"  ->  click "More info", then "Run anyway".
@@ -31,7 +33,8 @@ Move the mouse or press any key to leave.
 
 UNINSTALL
 ---------
-Pick another screensaver (or None) in Screen Saver Settings and delete CosmicShore.scr.
+Pick another screensaver (or None) in Screen Saver Settings and delete
+C:\Windows\System32\CosmicShore.scr.
 To remove everything it stored, also delete %APPDATA%\Froglet\CosmicShoreScreensaver and
 %LOCALAPPDATA%\Froglet\CosmicShoreScreensaver.
 
