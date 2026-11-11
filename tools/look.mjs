@@ -31,7 +31,7 @@ for (const view of (process.env.VIEWS ?? "lavalamp,vessel").split(",")) {
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
     for (let k = 0; k < Number(process.env.SHOTS ?? 4); k++) {
       await page.waitForTimeout(Number(process.env.EVERY ?? 8000));
-      await page.screenshot({ path: `smoke-out/look-${view}-${k}.png` });
+      await page.screenshot({ path: `smoke-out/look-${view}-${k}.png`, timeout: 120000 });
       console.log(`${view} ${k}: ${await page.textContent('#hud')}`);
     }
   } catch (e) { problems.push(`[${view}] never ready: ${e.message}`); }

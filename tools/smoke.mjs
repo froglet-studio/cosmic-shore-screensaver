@@ -31,7 +31,9 @@ for (const [view, query] of [['lavalamp', ''], ['vessel', ''], ['lavalamp-dartfr
   try {
     await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
     await page.waitForTimeout(3000);
-    await page.screenshot({ path: `smoke-out/${view}.png` });
+    // A screenshot under software WebGL (SwiftShader) waits for a full frame and its readback: about 14 s
+    // here and about twice that on a GitHub runner, so Playwright's 30 s default sat at the edge (PR #13).
+    await page.screenshot({ path: `smoke-out/${view}.png`, timeout: 120000 });
     console.log(`${view}: ${await page.textContent('#hud')}`);
   } catch (e) { problems.push(`[${view}] never ready: ${e.message}`); }
   await page.close();
