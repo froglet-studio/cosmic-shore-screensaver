@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { makePrismGeometry, makePrismMaterial } from './garland';
-import type { DomainColors } from './palette';
+import type { DomainColors } from './colours';
 
 /**
  * A vessel's prism trail, laid the way the game's VesselPrismController lays the Squirrel's

@@ -95,6 +95,7 @@ foreach ($kind in $inputs.Keys) {
   if ($first) {
     # fps=30 from the corrupt file's defaults
     if ($text -notmatch "fps=30") { Fail "corrupt settings did not fall back to fps=30" }
+    if ($text -notmatch "colours=nocturne") { Fail "corrupt settings did not fall back to the default colour set" }
     $first = $false
   }
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
@@ -106,12 +107,15 @@ foreach ($kind in $inputs.Keys) {
   if ((LogText $log) -notmatch "quit: ") { Fail "/s ($kind): no quit line in the log" }
 }
 
-# ── settings round trip: 60 fps written by hand is read back ─────────────────────────────────
-Set-Content (Join-Path $settingsDir "settings.json") '{ "fps": 60, "screens": "all", "view": "vessel" }' -Encoding ascii
+# ── settings round trip: 60 fps, close-up and Dart Frog written by hand are read back ─────────────────────────────────
+Set-Content (Join-Path $settingsDir "settings.json") '{ "fps": 60, "screens": "all", "view": "vessel", "colours": "dartfrog" }' -Encoding ascii
 $log = Join-Path $Out "run-settings.log"
 $p = Start-Scr @("/S") $log   # upper case, as Windows may send it
-if (-not (Wait-Log $log "navigate .*fps=60&view=vessel" 1 30)) { Fail "settings.json was not applied (fps=60, view=vessel)" }
-Start-Sleep -Seconds 1
+if (-not (Wait-Log $log "navigate .*fps=60&view=vessel.*colours=dartfrog" 1 30)) { Fail "settings.json was not applied (fps=60, view=vessel, colours=dartfrog)" }
+if (-not (Wait-Log $log "scene ready" 1 $ReadyTimeoutSec)) { Fail "/S in Dart Frog: the scene was not ready" }
+if ((LogText $log) -match "page error") { Fail "/S in Dart Frog: page error in the log" }
+Start-Sleep -Seconds 3
+Shot "fullscreen-dartfrog"
 [Inject]::Key()
 if (-not $p.WaitForExit(5000)) { Fail "/S did not exit on a key"; $p.Kill() }
 Remove-Item (Join-Path $settingsDir "settings.json")

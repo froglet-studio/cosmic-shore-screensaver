@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { DOMAINS } from './palette';
+import { DOMAINS } from './colours';
 import { loadBytes, loadJson } from './content';
 
 interface GarlandMeta {

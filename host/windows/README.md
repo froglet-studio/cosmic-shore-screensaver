@@ -10,7 +10,7 @@ makes no network request: every other request is refused (403) and the page's CS
 |---|---|
 | `/s` | A borderless topmost window per monitor; the cursor hides. Any key, click, wheel, touch or a mouse move over 8 px exits (raw input, a cursor check and the page's own events; input in the first 0.75 s is ignored). A display change also exits. |
 | `/p <HWND>` (or `/p:<HWND>`) | A child of the Screen Saver Settings thumbnail at half resolution and 15 fps; exits when that window goes away. Input does not exit it. |
-| `/c[:<HWND>]` or no argument | The settings dialog: frame rate (30 / 60), every screen or the main one only, wide or close-up camera. Saved to `%APPDATA%\Froglet\CosmicShoreScreensaver\settings.json`; a missing or corrupt file means the defaults. |
+| `/c[:<HWND>]` or no argument | The settings dialog: frame rate (30 / 60), every screen or the main one only, wide or close-up camera, and the colour set (one of the game's own, listed from `src/colour_sets.h`, which `tools/export/export_palette.py` writes; the page gets it as `?colours=<id>`). Saved to `%APPDATA%\Froglet\CosmicShoreScreensaver\settings.json`; a missing or corrupt file means the defaults. |
 | `/w` | Ours, for testing: a normal 1280×720 window. |
 
 Other behaviour: when the displays switch off the web views are hidden so the page stops drawing; a

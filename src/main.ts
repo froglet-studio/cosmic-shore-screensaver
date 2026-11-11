@@ -7,14 +7,15 @@ import { loadVessel } from './vessel';
 import { Sky } from './sky';
 import { GamePostPass } from './post';
 import { loadNucleus, makeMembrane } from './shell';
-import { DOMAINS, JADE } from './palette';
+import { DOMAINS, JADE, WORN, chooseInPreview } from './colours';
+import { COLOUR_SETS } from './palette';
 import { Rng } from './rng';
 import { Crystal, CRYSTAL_HIT_RADIUS } from './crystal';
 import { Pilot } from './pilot';
 import { Trail } from './trail';
 import { attachHost, hostReady } from './host';
 
-// ── settings (URL params for now; a settings model arrives in M3) ─────────────────────────
+// ── settings (URL params; the colour set is read by src/colours.ts) ───────────────────────
 const params = new URLSearchParams(location.search);
 const FPS_CAP = Number(params.get('fps') ?? 30);
 const DEBUG = params.has('debug');
@@ -170,6 +171,22 @@ if ((window as unknown as { __PREVIEW?: boolean }).__PREVIEW) {
     bar.appendChild(b);
     return b;
   };
+  // The game's colour sets: the choice is remembered in this browser and the page starts again in it.
+  const colours = document.createElement('select');
+  colours.setAttribute('aria-label', 'Colour set');
+  colours.title = 'Colour set';
+  for (const set of COLOUR_SETS) {
+    const o = document.createElement('option');
+    o.value = set.id;
+    o.textContent = set.label;
+    o.title = set.line;
+    o.selected = set.id === WORN.id;
+    colours.appendChild(o);
+  }
+  colours.addEventListener('change', () => chooseInPreview(colours.value));
+  // keep 'v' from switching the view while the menu has the keyboard
+  colours.addEventListener('keydown', (e) => e.stopPropagation());
+  bar.appendChild(colours);
   viewBtn = mk(view === 'vessel' ? 'Wide view' : 'Close-up', toggleView);
   mk('Full screen', () => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});

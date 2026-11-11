@@ -7,3 +7,4 @@
 #define IDC_SCREENS 203
 #define IDC_VIEW 204
 #define IDC_VERSION 205
+#define IDC_COLOURS 206
