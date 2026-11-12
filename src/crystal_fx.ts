@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { DEPTH, ARCS } from './crystal_fx_data';
 import { loadJson } from './content';
+import { traced } from './colours';
 
 /**
  * The Omni crystal's two element effects, ported from the game (Docs/PALETTE.md §2.10 in the game repo):
@@ -148,9 +149,9 @@ export class DepthPrisms {
       uFaceSplit: { value: DEPTH.faceSplit },
       uSplitUnit: { value: DEPTH.splitUnit },
       uSpread: { value: DEPTH.spread },
-      uBright: { value: lin(DEPTH.bright) },
-      uDark: { value: lin(DEPTH.dark) },
-      uStrikeColor: { value: lin(DEPTH.strike) },
+      uBright: { value: traced('depth._BrightColor', lin(DEPTH.bright)) },
+      uDark: { value: traced('depth._DarkColor', lin(DEPTH.dark)) },
+      uStrikeColor: { value: traced('depth._StrikeColor', lin(DEPTH.strike)) },
     };
     // Two passes, as the game's two: the arriving prism and, during a reseat, the leaving one (Cull Off, opaque)
     for (const leaving of [0, 1]) {
@@ -608,8 +609,8 @@ export class ChargeArcs {
       polygonOffsetFactor: -1,
       polygonOffsetUnits: -1,
       uniforms: {
-        uBright: { value: lin(ARCS.bright) },
-        uCore: { value: lin(ARCS.core) },
+        uBright: { value: traced('arcs._BrightColor', lin(ARCS.bright)) },
+        uCore: { value: traced('arcs._ArcCoreColor', lin(ARCS.core)) },
         uBolt: { value: ARCS.boltIntensity },
         uGlow: { value: ARCS.glowIntensity },
       },

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { loadBytes } from './content';
 import { Rng } from './rng';
+import { traced } from './colours';
 
 /**
  * The cell's shell on the Home screen (Garland Cell Config): the nucleus cage and the capsule membrane.
@@ -26,9 +27,10 @@ export async function loadNucleus(): Promise<THREE.Object3D> {
     depthWrite: false,
     side: THREE.FrontSide,
     uniforms: {
-      uEdge: { value: lin(0, 0.023529412, 0.7490196) },
-      uStraight: { value: lin(0.32514533, 0.3480816, 0.754717) },
-      uFresnelColor: { value: new THREE.Color(0.0063706073, 0.0071669333, 0.0230934508) },
+      uEdge: { value: traced('cage._Edge_Color', lin(0, 0.023529412, 0.7490196)) },
+      uStraight: { value: traced('cage._Straight_Color', lin(0.32514533, 0.3480816, 0.754717)) },
+      // CageGraph's nucleus blend, now the material's _Nucleus_Dark
+      uFresnelColor: { value: traced('cage._Nucleus_Dark', lin(0.0733298857, 0.079784937, 0.164468809)) },
       uAlpha: { value: 0.1 },
     },
     vertexShader: /* glsl */ `
@@ -93,8 +95,8 @@ export function makeMembrane(seed = 42): THREE.InstancedMesh {
     side: THREE.FrontSide,
     uniforms: {
       uTime: { value: 0 },
-      uDull: { value: lin(0, 0.027586222, 1) },
-      uBright: { value: lin(0.36976376, 0.39671606, 0.9559748) },
+      uDull: { value: traced('membrane._DullColor', lin(0, 0.027586222, 1)) },
+      uBright: { value: traced('membrane._BrightColor', lin(0.36976376, 0.39671606, 0.9559748)) },
       uCellDensity: { value: 1.5 },
       uDistance: { value: 2000000 },
     },

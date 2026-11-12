@@ -32,10 +32,12 @@ const preview = `<title>Cosmic Shore Screensaver</title>
          font: 12px/1.4 system-ui, sans-serif; color: var(--muted); opacity: .7; pointer-events: none; }
   #controls { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
               display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
-  #controls button { font: 500 13px/1 system-ui, sans-serif; color: var(--fg); background: var(--btn); border: 1px solid var(--btn-edge);
+  #controls button, #controls select { font: 500 13px/1 system-ui, sans-serif; color: var(--fg); background: var(--btn); border: 1px solid var(--btn-edge);
                      border-radius: 6px; padding: 9px 12px; cursor: pointer; backdrop-filter: blur(6px); }
-  #controls button:hover { border-color: var(--fg); }
-  #controls button:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  #controls select { padding: 8px 10px; max-width: 60vw; }
+  #controls select option { background: #0c1228; color: var(--fg); }
+  #controls button:hover, #controls select:hover { border-color: var(--fg); }
+  #controls button:focus-visible, #controls select:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
   #loading { position: fixed; inset: 0; display: grid; place-items: center; font: 14px system-ui, sans-serif; color: var(--muted); pointer-events: none; }
 </style>
 <div id="loading">Loading the Garland…</div>

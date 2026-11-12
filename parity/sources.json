@@ -5,19 +5,24 @@
   "items": [
     {
       "id": "palette",
-      "what": "Domain colours: prism faces and rims, hull, trail. The game paints with whichever colour set ThemeManagerDataContainer names (Nocturne since 2026-11-03).",
+      "what": "The game's colour sets (every unlocked ColorSetCatalog entry): domain colours for prism faces and rims, hull and trail, plus each set's traced colours for the sky, nucleus, membrane and crystal materials (the game's colour trace). The default is the set ThemeManagerDataContainer names (Nocturne since 2026-11-03); the person picks another in settings.",
       "game": [
         "Assets/_SO_Assets/ThemeManagerDataContainer.asset",
         "Assets/_SO_Assets/Color Palettes/",
         "Assets/_Scripts/ScriptableObjects/SO_ColorSet.cs",
-        "Assets/_Scripts/Controller/Managers/ThemeManager.cs"
+        "Assets/_Scripts/ScriptableObjects/ColorTrace.cs",
+        "Assets/_Scripts/Controller/Managers/ThemeManager.cs",
+        "Assets/_Scripts/Controller/Managers/WorldColorTrace.cs",
+        "Docs/VesselModels/COLOR_TRACE.md"
       ],
       "screensaver": [
-        "src/palette.ts"
+        "src/palette.ts",
+        "src/colours.ts",
+        "host/windows/src/colour_sets.h"
       ],
-      "sync": "python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore",
+      "sync": "python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore (all sets, their traced material colours, and the hosts' lists)",
       "auto_check": "palette",
-      "synced_at": "38ed172e6dd04177cbea4c36c76df9bcbf3d9ce4"
+      "synced_at": "548ed93f01ea10b745c1c25143285ee478224664"
     },
     {
       "id": "garland",
@@ -71,7 +76,7 @@
         "src/sky_shader.ts"
       ],
       "sync": "python3 tools/export/export_skybox.py --game-repo ../Cosmic-Shore (shader and material values, generated); src/sky.ts bakes it into a cube map.",
-      "synced_at": "388e0b3b0fb8d413a932f530b1791a5e74ce6872"
+      "synced_at": "548ed93f01ea10b745c1c25143285ee478224664"
     },
     {
       "id": "post",
@@ -138,7 +143,7 @@
         "public/content/nucleus.glb"
       ],
       "sync": "Mesh: tools/export/export_vessel.py --name nucleus --fbx Assets/_Models/Node2.fbx --no-anim. Shaders, colours and the membrane layout: hand port into src/shell.ts.",
-      "synced_at": "15f1d3ae0b373d39af7e0c1a5def623598e45fc0"
+      "synced_at": "548ed93f01ea10b745c1c25143285ee478224664"
     },
     {
       "id": "crystal",
@@ -159,7 +164,7 @@
         "public/content/crystal.glb"
       ],
       "sync": "Mesh: tools/export/export_vessel.py --name crystal --fbx Assets/_Models/OmniCrystalExport1_8-21-25.fbx --no-anim. Shader and colours: hand port into src/crystal.ts.",
-      "synced_at": "6b5991d44c5fa06e44eca9a5a4bc6a7fcd812c2c"
+      "synced_at": "548ed93f01ea10b745c1c25143285ee478224664"
     },
     {
       "id": "crystal-fx",

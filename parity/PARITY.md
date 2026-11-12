@@ -14,7 +14,7 @@ runs: game repo → exporters → files committed here → a new release.
 |---|---|
 | `parity/sources.json` | Every Home screen piece the screensaver copies (palette, Garland, prism look, sky, bloom, camera, crystal, vessels, flora, fauna), the game paths it comes from, the screensaver files it feeds, how to sync it, and **`synced_at`**: the game commit it was last brought over from. |
 | `tools/parity/check.py` | Lists, per piece, the game commits that touched its game paths since `synced_at`, flags game paths that were renamed or moved, and checks two pieces by value: the palette and the Garland generator. Exits 1 when anything needs attention. |
-| `tools/export/export_palette.py` | Writes `src/palette.ts` from the colour set the game **actually paints with** (the one `ThemeManagerDataContainer.asset` names), so the next default switch is one command. `--check` is its drift gate; `--set photic` (or `dartfrog`, any `ColorSetCatalog` id) tries another set. |
+| `tools/export/export_palette.py` | Writes `src/palette.ts` with every colour set of the game's `ColorSetCatalog` (the settings' Colours choice, each with its traced sky, cage, membrane and crystal colours) and the hosts' lists of them; the default is the set the game **actually paints with** (the one `ThemeManagerDataContainer.asset` names), so the next default switch or new set is one command. `--check` is its drift gate. |
 
 ## When to run it
 

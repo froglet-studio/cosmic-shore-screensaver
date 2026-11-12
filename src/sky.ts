@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SKY_GLSL, SKY_VALUES } from './sky_shader';
+import { traced } from './colours';
 
 /**
  * The game's HyperSea sky (src/sky_shader.ts, generated from HyperSeaSkybox.shader + its material).
@@ -33,8 +34,14 @@ export class Sky {
     });
     this.cubeCamera = new THREE.CubeCamera(0.1, 10, this.target);
     const uniforms: Record<string, THREE.IUniform> = { uTime: { value: 0 } };
+    // Colours as the worn colour set retraces them (src/colours.ts); directions and numbers as the material has them.
     for (const [k, v] of Object.entries(SKY_VALUES)) {
-      uniforms[k] = { value: Array.isArray(v) ? new THREE.Vector3(v[0], v[1], v[2]) : v };
+      if (!Array.isArray(v)) {
+        uniforms[k] = { value: v };
+        continue;
+      }
+      const c = traced(`sky.${k}`, new THREE.Color(v[0], v[1], v[2]));
+      uniforms[k] = { value: new THREE.Vector3(c.r, c.g, c.b) };
     }
     this.material = new THREE.ShaderMaterial({
       side: THREE.BackSide,

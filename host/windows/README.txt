@@ -21,7 +21,7 @@ This early build is not code-signed yet, so Windows warns you the first time:
   "Windows protected your PC"  ->  click "More info", then "Run anyway".
 Some antivirus programs are also wary of unsigned screensavers. A signed build comes later.
 
-Settings (frame rate, which screens, wide or close-up camera) are under "Settings..." in
+Settings (frame rate, which screens, wide or close-up camera, the colour set) are under "Settings..." in
 Screen Saver Settings. They are kept in %APPDATA%\Froglet\CosmicShoreScreensaver\settings.json.
 
 

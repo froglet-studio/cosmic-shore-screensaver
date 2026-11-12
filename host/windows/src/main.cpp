@@ -25,6 +25,7 @@
 #include <vector>
 
 #include "WebView2.h"
+#include "colour_sets.h"
 #include "resource.h"
 
 #ifndef SCR_VERSION_W
@@ -56,7 +57,15 @@ struct Settings {
   int fps = 30;               // 30 or 60
   bool allScreens = true;     // false: the main screen only, the others black
   std::wstring view = L"lavalamp";  // "lavalamp" (the Home screen's wide orbit) or "vessel" (close-up)
+  std::wstring colours = kDefaultColourSet;  // a colour set id from colour_sets.h (the game's catalog)
 };
+
+// The index of a colour set id in kColourSets, or -1.
+int ColourSetIndex(const std::wstring& id) {
+  for (size_t i = 0; i < _countof(kColourSets); ++i)
+    if (id == kColourSets[i].id) return static_cast<int>(i);
+  return -1;
+}
 
 struct Screen {
   HWND hwnd = nullptr;
@@ -145,7 +154,7 @@ std::wstring SettingsPath() {
   return dir.empty() ? dir : dir + L"\\settings.json";
 }
 
-// Reads one value of a flat JSON object; enough for the three keys we write ourselves.
+// Reads one value of a flat JSON object; enough for the keys we write ourselves.
 std::string JsonValue(const std::string& s, const char* key) {
   const std::string k = std::string("\"") + key + "\"";
   size_t i = s.find(k);
@@ -178,6 +187,10 @@ Settings LoadSettings() {
   if (fps == "60") st.fps = 60;
   st.allScreens = JsonValue(s, "screens") != "main";
   if (JsonValue(s, "view") == "vessel") st.view = L"vessel";
+  // Ids are plain ASCII (the game's catalog ids); one this build does not know keeps the default.
+  const std::string colours = JsonValue(s, "colours");
+  const std::wstring wcolours(colours.begin(), colours.end());
+  if (ColourSetIndex(wcolours) >= 0) st.colours = wcolours;
   return st;
 }
 
@@ -185,8 +198,8 @@ bool SaveSettings(const Settings& st) {
   const std::wstring path = SettingsPath();
   FILE* f = nullptr;
   if (path.empty() || _wfopen_s(&f, path.c_str(), L"wb") != 0 || !f) return false;
-  fprintf(f, "{\n  \"fps\": %d,\n  \"screens\": \"%s\",\n  \"view\": \"%s\"\n}\n", st.fps,
-          st.allScreens ? "all" : "main", st.view == L"vessel" ? "vessel" : "lavalamp");
+  fprintf(f, "{\n  \"fps\": %d,\n  \"screens\": \"%s\",\n  \"view\": \"%s\",\n  \"colours\": \"%ls\"\n}\n",
+          st.fps, st.allScreens ? "all" : "main", st.view == L"vessel" ? "vessel" : "lavalamp", st.colours.c_str());
   return fclose(f) == 0;
 }
 
@@ -207,6 +220,11 @@ INT_PTR CALLBACK SettingsProc(HWND dlg, UINT msg, WPARAM wp, LPARAM) {
       SendMessageW(view, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Wide (the Home screen)"));
       SendMessageW(view, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Close-up on the vessel"));
       SendMessageW(view, CB_SETCURSEL, st.view == L"vessel" ? 1 : 0, 0);
+      HWND colours = GetDlgItem(dlg, IDC_COLOURS);
+      for (const ColourSetEntry& e : kColourSets)
+        SendMessageW(colours, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(e.label));
+      const int sel = ColourSetIndex(st.colours);
+      SendMessageW(colours, CB_SETCURSEL, sel < 0 ? 0 : sel, 0);
       const std::wstring about = std::wstring(L"Version ") + SCR_VERSION_W +
                                  L". Runs offline; nothing is sent anywhere.";
       SetDlgItemTextW(dlg, IDC_VERSION, about.c_str());
@@ -218,6 +236,8 @@ INT_PTR CALLBACK SettingsProc(HWND dlg, UINT msg, WPARAM wp, LPARAM) {
         st.fps = SendDlgItemMessageW(dlg, IDC_FPS, CB_GETCURSEL, 0, 0) == 1 ? 60 : 30;
         st.allScreens = SendDlgItemMessageW(dlg, IDC_SCREENS, CB_GETCURSEL, 0, 0) != 1;
         st.view = SendDlgItemMessageW(dlg, IDC_VIEW, CB_GETCURSEL, 0, 0) == 1 ? L"vessel" : L"lavalamp";
+        const LRESULT c = SendDlgItemMessageW(dlg, IDC_COLOURS, CB_GETCURSEL, 0, 0);
+        if (c >= 0 && c < static_cast<LRESULT>(_countof(kColourSets))) st.colours = kColourSets[c].id;
         if (!SaveSettings(st))
           MessageBoxW(dlg, L"The settings could not be saved.", L"Cosmic Shore Screensaver", MB_ICONWARNING);
         EndDialog(dlg, IDOK);
@@ -286,10 +306,11 @@ void OnRawInput(LPARAM lp) {
 // ── the web views ────────────────────────────────────────────────────────────────────────────
 std::wstring PageUrl(const Screen& s) {
   const bool preview = g_mode == Mode::Preview;
-  wchar_t q[256];
-  swprintf_s(q, L"?host=scr&mode=%ls&fps=%d&view=%ls&scale=%ls&seed=%lu",
+  wchar_t q[320];
+  swprintf_s(q, L"?host=scr&mode=%ls&fps=%d&view=%ls&scale=%ls&seed=%lu&colours=%ls",
              preview ? L"p" : g_mode == Mode::Window ? L"w" : L"s", preview ? 15 : g_settings.fps,
-             g_settings.view.c_str(), preview ? L"0.5" : L"1", static_cast<unsigned long>(g_seed + 7919u * s.index));
+             g_settings.view.c_str(), preview ? L"0.5" : L"1", static_cast<unsigned long>(g_seed + 7919u * s.index),
+             g_settings.colours.c_str());
   return std::wstring(kPage) + q;
 }
 

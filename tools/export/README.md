@@ -16,13 +16,19 @@ model's prism count disagrees with the game's committed measurement of the shipp
 ## Palette
 
 ```bash
-python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore          # write src/palette.ts
+python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore          # write the colour sets
 python3 tools/export/export_palette.py --game-repo ../Cosmic-Shore --check  # exit 1 on drift
 ```
 
-Plain Python 3. It reads the colour set the game paints with (the `ColorSet` field of
-`ThemeManagerDataContainer.asset`; Nocturne since 2026-11-03), not a file name. `--set photic` or
-`--set dartfrog` writes another set from the game's `ColorSetCatalog`. See `parity/PARITY.md` for when to run it.
+Plain Python 3. Writes every unlocked set of the game's `ColorSetCatalog` into `src/palette.ts` (the settings'
+**Colours** choice) and the list of them into `host/windows/src/colour_sets.h` (and
+`host/macos/Sources/ColourSets.swift` once that host exists). Each set carries its four domain blocks and its
+**traced** colours for the materials the screensaver copies (sky, nucleus cage, membrane, crystal and its effects):
+the game repaints every material colour from the worn set by the colour trace (`Docs/VesselModels/COLOR_TRACE.md`
+there), and the exporter does that lookup offline, so the page only picks a table. The default is the set the game
+paints with (the `ColorSet` field of `ThemeManagerDataContainer.asset`; Nocturne since 2026-11-03), read from the
+field, not a file name. A material colour the screensaver starts drawing from a new material is added to
+`MATERIALS` in the exporter. See `parity/PARITY.md` for when to run it.
 
 ## Sky
 

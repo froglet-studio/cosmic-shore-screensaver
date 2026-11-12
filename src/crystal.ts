@@ -4,6 +4,7 @@ import type { Rng } from './rng';
 import { loadBytes } from './content';
 import { ChargeArcs, DepthPrisms, plateIndex } from './crystal_fx';
 import { ARCS } from './crystal_fx_data';
+import { traced } from './colours';
 
 /**
  * The Home screen's one Omni crystal.
@@ -19,16 +20,19 @@ export const CRYSTAL_HIT_RADIUS = 12;
 /** The body's radius (0.735 in body units) times the columns' reach 3, plus a raised prism's own size: what the crystal can reach, body units. */
 const CRYSTAL_BOUND_RADIUS = 3.6;
 
-/** OmniCrystalBody.mat on OmniCrystalFresnelShader (gamma colours, converted to linear as Unity does). */
+/**
+ * OmniCrystalBody.mat on OmniCrystalFresnelShader (gamma colours, converted to linear as Unity does), as the worn
+ * colour set retraces them (src/colours.ts).
+ */
 const lin = (r: number, g: number, b: number) => new THREE.Color(r, g, b).convertSRGBToLinear();
 const OMNI = {
-  bright: lin(0.4862745, 0.9882354, 0),
-  dark: lin(0.0055484856, 0.006289184, 0.0044103395),
+  bright: traced('omni._BrightColor', lin(0.4862745, 0.9882354, 0)),
+  dark: traced('omni._DarkColor', lin(0.0055484856, 0.006289184, 0.0044103395)),
   // _ElementShades 1: each plate wears its element's shade of lime (CrystalElementPlates)
-  charge: lin(0.18, 0.3232, 0),
-  mass: lin(0.3083, 0.5298, 0),
-  space: lin(0.4466, 0.7524, 0),
-  time: lin(0.5929, 0.9882, 0),
+  charge: traced('omni._ChargeColor', lin(0.18, 0.3232, 0)),
+  mass: traced('omni._MassColor', lin(0.3083, 0.5298, 0)),
+  space: traced('omni._SpaceColor', lin(0.4466, 0.7524, 0)),
+  time: traced('omni._TimeColor', lin(0.5929, 0.9882, 0)),
   spread: 0.01,
 };
 
