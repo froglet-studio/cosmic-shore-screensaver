@@ -48,7 +48,7 @@ scene.add(sun);
 
 const sky = new Sky();
 sky.bakeAll(renderer, 0);
-scene.background = sky.texture;
+scene.add(sky.background);
 
 // The cell's shell: the nucleus cage and the capsule membrane (src/shell.ts)
 const membrane = makeMembrane();
