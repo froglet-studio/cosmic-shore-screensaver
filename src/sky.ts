@@ -10,10 +10,10 @@ import { traced } from './colours';
  * StaticHyperSeaSkybox, it is baked into cube maps and the screensaver draws a cube map as the background.
  *
  * Every cube map is baked whole at ONE moment of the sky (a keyframe, KEY_S seconds apart), and the background
- * crossfades between the two keyframes either side of now. The keyframe after those is baked meanwhile, a thin
- * strip of a face per frame, into a third cube map that is never on screen until it is complete. So the six
- * faces always show the same moment (no seams where faces meet), and the drift moves smoothly instead of a face
- * jumping when its turn comes.
+ * crossfades between two neighbouring keyframes. The keyframe after those is baked meanwhile, a few thin strips
+ * per frame, into a third cube map that is never on screen until it is complete. So the six faces always show
+ * the same moment (no seams where faces meet), and the drift moves smoothly instead of a face jumping when its
+ * turn comes.
  *
  * Until 2026-11-18 one face was re-baked per second straight into the cube on screen, so neighbouring faces
  * showed the sky up to five seconds apart: the cell lines broke at the face edges and each re-bake was a visible
@@ -26,6 +26,9 @@ const KEY_S = 2.0;
 /** Strips per face: the bake work is spread over the frames of one keyframe interval. */
 const STRIPS = 16;
 const UNITS = 6 * STRIPS;
+/** At most a quarter face per frame, so a slow GPU never gets a long frame: there the sky's own clock slips
+ *  (it holds on the newest keyframe until the next is finished) instead of the frame rate. */
+const MAX_STRIPS_PER_FRAME = 4;
 
 const BG_VERTEX = /* glsl */ `
   varying vec3 vWorldDirection;
@@ -49,14 +52,18 @@ const BG_FRAGMENT = /* glsl */ `
 export class Sky {
   /** The background: a unit box that follows the camera and blends two keyframes. Add it to the scene. */
   readonly background: THREE.Mesh;
-  /** keys[0] is the keyframe at keyTime, keys[1] at keyTime + KEY_S, keys[2] the one being baked. */
+  /** keys[0] is the keyframe at skyTime, keys[1..ready] the ones after it (KEY_S apart), keys[ready + 1] the one
+   *  being baked. */
   private readonly keys: THREE.WebGLCubeRenderTarget[];
   private readonly bakeScene = new THREE.Scene();
   private readonly cubeCamera: THREE.CubeCamera;
   private readonly material: THREE.ShaderMaterial;
   private readonly bgMaterial: THREE.ShaderMaterial;
-  private keyTime = 0;
-  private baked = 0; // strips of keys[2] done
+  private skyTime = 0; // the sky's moment in keys[0]
+  private ready = 0; // finished keyframes after keys[0]
+  private fadeStart = 0; // wall time the fade keys[0] -> keys[1] began
+  private bakeStart = 0; // wall time the bake in progress began
+  private baked = 0; // strips of the bake in progress done
 
   constructor() {
     // Half-float, linear: the galactic band and core are HDR (well above 1), and the game's bloom feeds on that
@@ -128,49 +135,57 @@ export class Sky {
     };
   }
 
-  /** Bake the first two keyframes whole (at load), starting the sky at time t. */
+  /** Bake the first keyframe whole (at load); the next is baked in strips from the first update on. */
   bakeAll(renderer: THREE.WebGLRenderer, t: number): void {
-    this.keyTime = t;
-    for (let k = 0; k < 2; k++) {
-      this.cubeCamera.renderTarget = this.keys[k];
-      this.material.uniforms.uTime.value = t + k * KEY_S;
-      this.cubeCamera.update(renderer, this.bakeScene);
-    }
+    this.cubeCamera.renderTarget = this.keys[0];
+    this.material.uniforms.uTime.value = t;
+    this.cubeCamera.update(renderer, this.bakeScene);
+    this.skyTime = t;
+    this.ready = 0;
     this.baked = 0;
-    this.show(t);
+    this.bakeStart = this.fadeStart = t;
+    this.show(0);
   }
 
-  /** Each frame: bake the share of the next keyframe that is due, and set the crossfade for time t. */
+  /** Each frame: bake the share of the next keyframe that is due, and set the crossfade for wall time t. */
   update(renderer: THREE.WebGLRenderer, t: number): void {
-    // A long stall (a sleeping host) skips ahead rather than racing through stale keyframes.
-    if (t - this.keyTime >= 3 * KEY_S) {
-      this.bakeAll(renderer, t);
-      return;
+    if (this.ready < 2) {
+      // Spread the work evenly over one interval (one strip ahead), never more than the per-frame cap.
+      const due = Math.min(UNITS, Math.ceil(((t - this.bakeStart) / KEY_S) * UNITS) + 1);
+      this.bakeStrips(renderer, Math.min(due, this.baked + MAX_STRIPS_PER_FRAME));
+      if (this.baked >= UNITS) {
+        this.ready++;
+        this.baked = 0;
+        this.bakeStart = t;
+        if (this.ready === 1) this.fadeStart = t; // the first fade starts when its target exists
+      }
     }
-    while (t - this.keyTime >= KEY_S) {
-      this.bakeStrips(renderer, UNITS); // finish the next keyframe before it is needed
+    if (this.ready === 0) return; // only keys[0] so far: it is on screen as is
+    const f = (t - this.fadeStart) / KEY_S;
+    if (f >= 1 && this.ready === 2) {
+      // keys[1] is fully on screen and the one after it is ready: step on.
       this.keys.push(this.keys.shift()!);
-      this.keyTime += KEY_S;
-      this.baked = 0;
+      this.skyTime += KEY_S;
+      this.ready = 1;
+      // Keep the cadence, but after a stall (a sleeping host) start the next fade now rather than jump.
+      this.fadeStart = t - this.fadeStart < 2 * KEY_S ? this.fadeStart + KEY_S : t;
+      this.bakeStart = t;
     }
-    // Spread the work evenly over the interval, one strip ahead so the last strip is never left for the swap.
-    const due = Math.min(UNITS, Math.ceil(((t - this.keyTime) / KEY_S) * UNITS) + 1);
-    this.bakeStrips(renderer, due);
-    this.show(t);
+    this.show(Math.min((t - this.fadeStart) / KEY_S, 1));
   }
 
-  private show(t: number): void {
+  private show(mix: number): void {
     const u = this.bgMaterial.uniforms;
     u.uFrom.value = this.keys[0].texture;
-    u.uTo.value = this.keys[1].texture;
-    u.uMix.value = Math.min(Math.max((t - this.keyTime) / KEY_S, 0), 1);
+    u.uTo.value = this.keys[this.ready > 0 ? 1 : 0].texture;
+    u.uMix.value = Math.max(mix, 0);
   }
 
-  /** Bake keys[2] (the keyframe at keyTime + 2 KEY_S) up to `upTo` strips. */
+  /** Bake keys[ready + 1] (the keyframe at skyTime + (ready + 1) KEY_S) up to `upTo` strips. */
   private bakeStrips(renderer: THREE.WebGLRenderer, upTo: number): void {
     if (this.baked >= upTo) return;
-    const target = this.keys[2];
-    this.material.uniforms.uTime.value = this.keyTime + 2 * KEY_S;
+    const target = this.keys[this.ready + 1];
+    this.material.uniforms.uTime.value = this.skyTime + (this.ready + 1) * KEY_S;
     this.cubeCamera.updateMatrixWorld();
     const prevTarget = renderer.getRenderTarget();
     const prevXr = renderer.xr.enabled;
